@@ -6,21 +6,24 @@ import 'package:lead_tracker/src/shared/components/app_error.dart';
 import 'package:lead_tracker/src/shared/components/app_loader.dart';
 
 /// Renders loading / error / data for an [AsyncValue] (hedged's `unfold`).
+///
+/// While a provider refreshes (e.g. a new search), the previous data stays on
+/// screen instead of flashing a loader.
 extension AsyncValueUnfold<T> on AsyncValue<T> {
   Widget unfold(Widget Function(T value) builder, {VoidCallback? onRetry}) {
-    return switch (this) {
-      AsyncValue(:final T value, hasValue: true, isLoading: false) => builder(
-        value,
-      ),
-      AsyncError(:final AppException error) => AppError(
-        message: error.message,
+    if (hasError && !isLoading) {
+      final error = this.error;
+      return AppError(
+        message: switch (error) {
+          AppException(:final message) => message,
+          _ => kDebugMode ? '$error\n$stackTrace' : 'Something went wrong.',
+        },
         onRetry: onRetry,
-      ),
-      AsyncError(:final error, :final stackTrace) => AppError(
-        message: kDebugMode ? '$error\n$stackTrace' : 'Something went wrong.',
-        onRetry: onRetry,
-      ),
-      _ => const AppLoader(),
-    };
+      );
+    }
+    if (hasValue) {
+      return builder(requireValue);
+    }
+    return const AppLoader();
   }
 }

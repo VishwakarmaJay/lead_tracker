@@ -17,11 +17,13 @@
 | `constants/keys.dart` | `scaffoldMessengerKey` so notifiers can show snack bars |
 | `error/app_exception.dart` | `AppException` + `ErrorType` (`database`, `file`, `permission`, `parse`, `platform`, `other`) |
 | `extension/future.dart` | `Future.guard()` — maps database (unique/foreign-key/check messages, newer-database), file, platform, and format errors to `AppException` |
-| `extension/async_value.dart` | `AsyncValue.unfold()` — loading → `AppLoader`, error → `AppError`, data → builder |
+| `extension/async_value.dart` | `AsyncValue.unfold()` — error → `AppError` (AppException message), data → builder (kept on screen while refreshing), else `AppLoader` |
 | `extension/context.dart` | `context.colors`, `context.text`, `context.isDark` |
 | `extension/log.dart` | `.logInfo()`, `.logSuccess()`, `.logWarning()`, `.logError()` |
 | `instances/shorebird_instance.dart` | `shorebirdProvider` (keepAlive) — `ShorebirdCodePush` |
 | `instances/app_restarter.dart` | `appRestarterProvider` (keepAlive) — restart with `RestartMode.process` |
+| `instances/phone_launcher.dart` | `phoneLauncherProvider` — `openDialer` (`tel:`, never places the call) and `openWhatsApp` (`wa.me`); injectable opener for tests |
+| `utils/formatters.dart` | `formatTime`, `formatDate`, `formatDateTime` (Today/Yesterday), `formatCallDuration` |
 | `instances/share_bridge.dart` | `shareBridgeProvider` (keepAlive) + `SharedFilePayload` — Dart side of the Kotlin share bridge |
 
 ## Notes

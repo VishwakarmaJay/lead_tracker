@@ -79,7 +79,11 @@ milestone below says which one it needs.
 
 - Leads can be managed offline; tap-to-call opens the dialer; manual calls appear in the timeline.
 
-**Ships as:** release if `url_launcher` is new to the build (native plugin), otherwise patch.
+**Ships as:** new release (`url_launcher` is a native plugin and is new to the build).
+
+**Status:** code done — leads list (search, status/temperature filters), add/edit form (validation, unrecognised-number and duplicate-number warnings, discard prompt), lead detail (status, temperature, Call, WhatsApp, Log call, timeline with edit/delete, delete with Undo), Calls tab, and a "Log call" prompt when you come back from a call started in the app. 112 automated tests. Device check: `DEVICE_TEST_CHECKLIST.md` §G.
+
+Not in this milestone: editing the default country code in Settings (it is stored and used, default `+91`); creating follow-ups from a call (Milestone 6).
 
 ## Milestone 3 — XLSX and CSV import
 

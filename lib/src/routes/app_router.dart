@@ -31,6 +31,8 @@ class AppRouter extends RootStackRouter {
         AutoRoute(page: SettingsRoute.page, path: 'settings'),
       ],
     ),
+    AutoRoute(page: LeadDetailRoute.page, path: '/leads/:id'),
+    AutoRoute(page: LeadFormRoute.page, path: '/lead-form'),
     AutoRoute(page: SharedInboxRoute.page, path: '/shared-inbox'),
   ];
 }

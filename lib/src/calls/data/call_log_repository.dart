@@ -84,6 +84,26 @@ class CallLogRepository {
     return _list(limit: limit);
   }
 
+  /// Newest first, with the linked lead's name (null when unlinked).
+  Future<List<CallLogWithLead>> listRecentWithLeads({int limit = 100}) {
+    return Future(() async {
+      final rows = await _db.rawQuery(
+        'SELECT c.*, l.name AS lead_name, l.deleted_at AS lead_deleted_at '
+        'FROM call_logs c LEFT JOIN leads l ON l.id = c.lead_id '
+        'ORDER BY c.called_at DESC, c.id DESC LIMIT ?',
+        [limit],
+      );
+      return [
+        for (final row in rows)
+          CallLogWithLead(
+            call: CallLog.fromMap(row),
+            leadName: row['lead_name'] as String?,
+            leadDeleted: row['lead_deleted_at'] != null,
+          ),
+      ];
+    }).guard();
+  }
+
   Future<List<CallLog>> _list({
     String? where,
     List<Object?>? whereArgs,

@@ -1,17 +1,27 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lead_tracker/src/calls/providers/pending_call_provider.dart';
+import 'package:lead_tracker/src/calls/ui/components/log_call_sheet.dart';
 import 'package:lead_tracker/src/recordings/providers/shared_inbox_provider.dart';
 import 'package:lead_tracker/src/routes/app_router.gr.dart';
 import 'package:lead_tracker/src/update/ui/components/patch_banner.dart';
 
 /// Bottom-tab shell: Dashboard, Leads, Calls, Follow-ups, Settings.
 ///
-/// The update banner sits above the navigation bar so it shows on every tab.
+/// Also hosts app-wide reactions that must work on every screen:
+/// - the update banner above the navigation bar;
+/// - opening Shared files when a share arrives;
+/// - offering "Log call" when the user returns from a call started here.
 @RoutePage()
-class HomePage extends ConsumerWidget {
+class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
 
+  @override
+  ConsumerState<HomePage> createState() => _HomePageState();
+}
+
+class _HomePageState extends ConsumerState<HomePage> {
   static const _destinations = [
     NavigationDestination(
       icon: Icon(Icons.dashboard_outlined),
@@ -40,8 +50,41 @@ class HomePage extends ConsumerWidget {
     ),
   ];
 
+  late final AppLifecycleListener _lifecycle;
+
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  void initState() {
+    super.initState();
+    _lifecycle = AppLifecycleListener(
+      onHide: () => ref.read(pendingCallTrackerProvider.notifier).markLeftApp(),
+      onResume: _offerToLogCall,
+    );
+  }
+
+  @override
+  void dispose() {
+    _lifecycle.dispose();
+    super.dispose();
+  }
+
+  Future<void> _offerToLogCall() async {
+    final pending = ref
+        .read(pendingCallTrackerProvider.notifier)
+        .takeOnReturn();
+    if (pending == null || !mounted) {
+      return;
+    }
+    await showLogCallSheet(
+      context,
+      leadId: pending.leadId,
+      leadName: pending.leadName,
+      currentTemperature: pending.temperature,
+      calledAt: pending.dialedAt,
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
     // A share arriving while the app is open opens the shared-files screen.
     ref.listen(sharedInboxProvider, (previous, next) {
       if (next.length > (previous?.length ?? 0) &&

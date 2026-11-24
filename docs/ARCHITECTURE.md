@@ -81,7 +81,10 @@ Rules:
   (for `context.colors`) and `src/shared/components` (for `.unfold()`), as in hedged.
 - Features talk to SQLite only through their own repository. Another feature
   may read a repository through its provider (e.g. dashboard reads lead and
-  follow-up repositories) but never imports another feature's `ui/`.
+  follow-up repositories) but never imports another feature's `ui/` — except
+  widgets that feature's `MODULE.md` lists as **public** (for example
+  `showLogCallSheet` and `CallLogTile` from calls, `showLeadPicker` and the
+  lead labels from leads).
 - Widely shared widgets/providers move to `src/shared/`.
 - Widgets don't import `sqflite`, run SQL, copy files, or parse spreadsheets.
 - Repositories return typed models, never raw maps.
@@ -130,17 +133,34 @@ Never log phone numbers, notes, or file paths.
 
 ### `keepAlive` providers
 
-Only: `appDatabaseProvider`, `appRouterProvider`, `startupProvider`,
-`appThemeModeProvider`, `notificationServiceProvider`, `shareBridgeProvider`,
-`shorebirdProvider`. Everything else auto-disposes.
+Only these (everything else auto-disposes):
+
+| Provider | Why it lives all session |
+| --- | --- |
+| `appDatabaseProvider` | the open SQLite connection |
+| `appRouterProvider` | the router |
+| `startupProvider` | runs once per launch |
+| `settingsProvider`, `appThemeModeProvider` | app-wide settings |
+| `shorebirdProvider`, `appRestarterProvider` | update client |
+| `shareBridgeProvider`, `sharedInboxProvider` | owns the share-event subscription |
+| `busyOperationsProvider` | blocks restart during imports |
+| `pendingCallTrackerProvider` | remembers a dialled call while the app is in the background |
+| `notificationServiceProvider` | Milestone 6 |
+
+Data views (lists, details) are auto-dispose. After a write, call
+`ref.refreshLeadViews(leadId: …)` (`src/leads/providers/lead_refresh.dart`).
+A notifier that is itself one of those views passes `skipDetail` /
+`skipTimeline` and calls `ref.invalidateSelf()` — a provider can't invalidate
+itself through `invalidate`.
 
 ## 4. Routing (auto_route)
 
 - `src/routes/app_router.dart`: `@AutoRouterConfig(replaceInRouteName: 'Page,Route')`,
   exposed through a `keepAlive` `appRouterProvider` (like hedged).
 - Routes: `SplashRoute` → `HomeRoute` (a `TabsRouter` with Dashboard, Leads,
-  Calls, Follow-ups, Settings). Pushed routes: `LeadDetailRoute(id)`,
-  `LeadFormRoute`, `ImportRoute`, `RecordingImportRoute`, `RecordingPlayerRoute(id)`.
+  Calls, Follow-ups, Settings). Pushed routes: `LeadDetailRoute(leadId)`
+  (`/leads/:id`), `LeadFormRoute(leadId?)`, `SharedInboxRoute`; later
+  `ImportRoute`, `RecordingImportRoute`, `RecordingPlayerRoute(id)`.
 - No auth/KYC/onboarding guards — there is no login. `SplashRoute` waits on
   `startupProvider` (database open, migrations, notification init, pending
   shares) before replacing itself with `HomeRoute`.

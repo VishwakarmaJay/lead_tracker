@@ -1,14 +1,28 @@
 # calls
 
-**Path:** `lib/src/calls/` · **Layer:** feature · **Status:** data layer done (Milestone 1); UI in Milestone 2, system sync in Milestone 5 (if the POC passes)
+**Path:** `lib/src/calls/` · **Layer:** feature · **Status:** Milestone 2 done (manual calls); system sync is Milestone 5 if the POC passes
+
+## Screens
+
+`CallsPage` (`CallsRoute`, tab) — calls logged in Lead Tracker, newest first, with the lead's name (tap opens the lead). **Log call** → lead picker → log sheet. States clearly that it isn't the phone's call history.
+
+## Providers
+
+- `recentCallsProvider` — `listRecentWithLeads()`.
+- `callLogEditorProvider` (`CallLogEditor`) — `save(CallLogInput, existing:)`: manual call (copies the lead's phone/name onto the call), edit, optional lead temperature change.
+- `pendingCallTrackerProvider` (keepAlive, `PendingCallTracker`) — `dial(lead)` opens the dialer via `PhoneLauncher` and remembers the call; the home shell calls `markLeftApp()` on hide and `takeOnReturn()` on resume to open the Log call sheet (only if the app really went to the background, within 3 hours).
+
+## Public for other features
+
+- `ui/components/log_call_sheet.dart` — `showLogCallSheet(context, leadId:, leadName:, currentTemperature:, existing:, calledAt:)` → `bool` saved.
+- `ui/components/call_log_tile.dart` — `CallLogTile`.
+- `ui/components/call_labels.dart` — `callType.label/icon/color`, `disposition.label`.
 
 ## Data
 
-- `data/models/call_log.dart` — `CallLog`, `CallLogDraft`, enums `CallSource`, `CallType`, `CallDisposition` (user-chosen, never inferred).
-- `data/call_log_repository.dart` — `CallLogRepository` / `callLogRepositoryProvider`: `createCallLog`, `getCallLogById`, `updateCallLog`, `linkToLead` (or unlink with null), `deleteCallLog`, `listForLead`, `listRecent` (newest first).
-
-The partial unique index allows any number of manual logs but rejects a repeated `(android_call_log, source_record_id)` — "This record already exists."
+- `data/models/call_log.dart` — `CallLog`, `CallLogDraft`, `CallLogWithLead`, `CallSource`, `CallType`, `CallDisposition` (user-chosen, never inferred).
+- `data/call_log_repository.dart` — create, get, update, link/unlink lead, delete, `listForLead`, `listRecent`, `listRecentWithLeads`.
 
 ## Tests
 
-`test/calls/call_log_repository_test.dart`
+`test/calls/` — repository, editor, pending-call tracker.

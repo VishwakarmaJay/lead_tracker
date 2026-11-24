@@ -10,8 +10,10 @@
 | `app_error.dart` | `AppError(message, onRetry)` — error state |
 | `app_empty_widget.dart` | `AppEmptyWidget(title, message, icon, action)` — empty state |
 | `app_confirmation.dart` | `showAppConfirmation(...)` → `bool`; `destructive: true` for deletes |
-| `app_snack_bar.dart` | `'message'.showSnackBar()` from widgets or notifiers |
+| `app_snack_bar.dart` | `'message'.showSnackBar(actionLabel:, onAction:)` from widgets or notifiers (e.g. Undo) |
 
 ## Providers
+
+- `phoneNormalizerProvider` — `PhoneNormalizer` with the Settings default country code.
 
 - `busyOperationsProvider` (keepAlive) — counter of running imports/copies/transactions. Wrap them in `ref.read(busyOperationsProvider.notifier).track(() => ...)`. The update banner disables **Restart now** while it is above zero.

@@ -13,6 +13,10 @@
 | ↳ `CallsRoute` | `calls` | `src/calls/ui/calls_page.dart` |
 | ↳ `FollowUpsRoute` | `follow-ups` | `src/follow_ups/ui/follow_ups_page.dart` |
 | ↳ `SettingsRoute` | `settings` | `src/settings/ui/settings_page.dart` |
+| `LeadDetailRoute(leadId)` | `/leads/:id` | `src/leads/ui/lead_detail_page.dart` |
+| `LeadFormRoute(leadId?)` | `/lead-form` | `src/leads/ui/lead_form_page.dart` |
 | `SharedInboxRoute` | `/shared-inbox` | `src/recordings/ui/shared_inbox_page.dart` |
 
 No guards — there is no login. Adding a page: `@RoutePage()` → register here → run codegen.
+
+`test/routes/app_router_test.dart` fails if any `@RoutePage()` in `lib/` is missing from `AppRouter.routes` (codegen still creates the route class, so a missing registration only fails at runtime with "Failed to navigate to XRoute").

@@ -70,7 +70,7 @@ dependencies:
   csv: any
   file_picker: any
 
-  url_launcher: 6.3.2              # (hedged)
+  url_launcher: 6.3.2              # (hedged) — added in Milestone 2
   just_audio: any
   crypto: any
 

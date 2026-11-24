@@ -188,3 +188,17 @@ class CallLogDraft {
     'called_at': calledAt.toDb(),
   };
 }
+
+/// A call plus the name of its lead, for the Calls tab.
+@immutable
+class CallLogWithLead {
+  const CallLogWithLead({
+    required this.call,
+    this.leadName,
+    this.leadDeleted = false,
+  });
+
+  final CallLog call;
+  final String? leadName;
+  final bool leadDeleted;
+}

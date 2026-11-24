@@ -120,13 +120,15 @@ physical-device test passes.
 - Dependency direction: `src/<feature>` → `src/shared` → `core`. `core` never
   imports a feature; its only `src/` imports are `src/theme` and
   `src/shared/components` (for `context.colors` and `.unfold()`, as in hedged).
-  Features don't reach into each other's `ui/`.
+  Features don't reach into each other's `ui/`, except widgets a feature's
+  `MODULE.md` lists as **public** (e.g. `showLogCallSheet`, `showLeadPicker`).
 - **Widgets never run SQL, copy files, parse spreadsheets, or hold permission
   logic.** SQL lives only in `data/` repositories; workflows (import, attach
   recording, schedule reminder) live in services/notifiers.
 - All providers use `@riverpod` / `@Riverpod(keepAlive: true)`. `keepAlive` only
-  for session-long singletons: database, router, startup, theme mode,
-  Shorebird, notifications, share bridge.
+  for session-long state: database, router, startup, settings, theme mode,
+  Shorebird, restarter, notifications, share bridge + shared inbox, busy
+  operations, pending call. The full list is in ARCHITECTURE.md §3.
 - Repositories return typed immutable models with explicit `fromMap`/`toMap`
   and `copyWith`. Enums persist stable string values.
 - Every repository/service call that can fail goes through `.guard()` and

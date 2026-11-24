@@ -37,6 +37,24 @@ Make a short test call with Google Phone recording on (both parties are notified
 - [ ] Reinstall the **same** build over itself (`adb install -r …`): theme is still Dark.
 - [ ] Uninstall and reinstall: theme is back to System (fresh database).
 
+## G. Lead management (Milestone 2)
+
+- [ ] Leads tab, empty: "No leads yet" with **Add lead**.
+- [ ] Add a lead with name + `98765 43210`. The phone hint shows "Saved for matching as +919876543210". Save opens the lead.
+- [ ] Add a lead with phone `12345`: hint warns it can't be recognised; Save asks "Save anyway". The row shows a ⚠ icon.
+- [ ] Add a second lead with `+91 98765 43210`: Save warns the number is already saved, naming the first lead.
+- [ ] Edit a lead, change something, press Back: "Discard changes?" appears. Save instead: returns to the detail screen with the change.
+- [ ] Search by part of a name, a company, an email, and the last digits of a phone. Status and temperature filters narrow the list; **Clear** resets them.
+- [ ] On a lead: change status from the dropdown and temperature from the chips; go back — the list row shows the new status/temperature.
+- [ ] **Call** opens the phone's dialer with the number filled in (Lead Tracker doesn't place the call). Make or cancel the call, return to Lead Tracker: the **Log call** sheet opens with the time filled in.
+- [ ] Log the call with outcome "Interested", a summary, 5 minutes, temperature Hot. It appears in the lead's Activity and on the Calls tab; the lead is now Hot.
+- [ ] Tap the call to edit it; use ⋮ → Delete to remove it (with confirmation).
+- [ ] **WhatsApp** (only on leads with a recognised number) opens a chat with that number; nothing is sent.
+- [ ] Calls tab → **Log call**: pick a lead in the search sheet, log a call.
+- [ ] Delete a lead from ⋮: it disappears; **Undo** in the snack bar brings it back. Its calls stay on the Calls tab either way.
+- [ ] Airplane mode on: everything above works except opening WhatsApp's chat.
+- [ ] Force-stop and reopen: leads and calls are still there.
+
 ## C. Call-log POC
 
 Follow `docs/poc/CALL_LOG_POC.md` and fill in its results table.
