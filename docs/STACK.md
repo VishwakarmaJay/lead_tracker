@@ -66,9 +66,9 @@ dependencies:
   path: ^1.9.1                     # (Milestone 1)
   path_provider: 2.1.5             # (hedged) — added in Milestone 4
 
-  excel: any
-  csv: any
-  file_picker: any
+  excel: ^4.0.6                    # Milestone 3
+  csv: ^8.0.0                      # Milestone 3
+  file_picker: ^11.0.3             # Milestone 3 — 13.x needs a newer Flutter than 3.38.3
 
   url_launcher: 6.3.2              # (hedged) — added in Milestone 2
   just_audio: any

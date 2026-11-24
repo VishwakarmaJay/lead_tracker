@@ -97,7 +97,9 @@ Not in this milestone: editing the default country code in Settings (it is store
 
 - Representative XLSX and CSV files import correctly; invalid rows and duplicates are reported; cancelling leaves no partial insert; works offline.
 
-**Ships as:** release (`file_picker` has native code). `excel`/`csv` alone would be patchable.
+**Ships as:** new release (`file_picker` has native code). `excel`/`csv` alone would be patchable.
+
+**Status:** code done — Leads tab → **Import** (or the empty-state button): choose file → match columns (sheet picker for XLSX, guessed columns with sample values) → review (counts, include switches, every row's outcome) → one-transaction import → result. 143 automated tests (one checks that the sample file matches this checklist), including real CSV and XLSX files and a forced mid-import failure that leaves nothing saved. Device check: `DEVICE_TEST_CHECKLIST.md` §H with `docs/samples/leads_sample.csv`.
 
 ## Milestone 4 — Google Phone recording import
 

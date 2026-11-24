@@ -30,7 +30,9 @@ Sections: `ui/sections/lead_{header,actions,info,timeline}_section.dart`.
 ## Data
 
 - `data/models/lead.dart` — `Lead`, `LeadDraft`, `LeadQuery`, `LeadStatus`, `LeadTemperature`.
-- `data/lead_repository.dart` — search, get, create (one or many), update, soft delete/restore, `findByNormalizedPhone` → list.
+- `data/lead_repository.dart` — search, get, create (one or many, one transaction), update, soft delete/restore, `findByNormalizedPhone` → list, `activeNamesByNormalizedPhone` (import duplicate check).
+
+The Leads tab links to the import wizard (`ImportRoute`) from the app bar and the empty state.
 
 ## Depends on
 

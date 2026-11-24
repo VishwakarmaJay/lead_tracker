@@ -15,6 +15,7 @@
 | ↳ `SettingsRoute` | `settings` | `src/settings/ui/settings_page.dart` |
 | `LeadDetailRoute(leadId)` | `/leads/:id` | `src/leads/ui/lead_detail_page.dart` |
 | `LeadFormRoute(leadId?)` | `/lead-form` | `src/leads/ui/lead_form_page.dart` |
+| `ImportRoute` | `/import` | `src/imports/ui/import_page.dart` |
 | `SharedInboxRoute` | `/shared-inbox` | `src/recordings/ui/shared_inbox_page.dart` |
 
 No guards — there is no login. Adding a page: `@RoutePage()` → register here → run codegen.

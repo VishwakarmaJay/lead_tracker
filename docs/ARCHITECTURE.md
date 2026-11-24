@@ -221,6 +221,29 @@ Support header aliases: `Name`, `Full Name`, `Phone`, `Mobile`, `Contact`,
 `Company`, `Email`, `Website`, `Source`. Parsing runs off the UI thread for big
 files (`compute`/isolate).
 
+As built (Milestone 3):
+
+- `FilePickerService.pickSpreadsheet()` — `.xlsx` / `.csv` only, 20 MB cap,
+  reads the bytes, then clears the picker's temporary copy. `.xls` (old Excel)
+  is rejected with a message to save as `.xlsx` or `.csv`.
+- `parseSpreadsheet()` (`imports/data/spreadsheet.dart`) runs in
+  `Isolate.run`. CSV: UTF-8 with Latin-1 fallback, BOM stripped, delimiter
+  auto-detected (`,` `;` tab), blank lines kept so row numbers match the file.
+  XLSX: every sheet; whole-number cells lose `.0` (phones typed as numbers);
+  formula cells are read as empty (the file stores only the formula).
+- `ColumnMapping.guess()` — exact aliases first, then keywords ("Primary
+  Mobile" → phone); each column fills one field.
+- `analyzeImport()` (also in an isolate) gives each row one outcome:
+  `ready`, `unrecognisedPhone`, `existingDuplicate`, `fileDuplicate`,
+  `invalid`. Unrecognised and already-saved numbers are skipped by default
+  and can be included with a switch; repeats within the file and rows
+  missing a name or phone are always skipped. An already-saved number is
+  imported as a **new** lead — the saved lead is never changed. Rows without
+  a source get `Import: <file name>`.
+- `ImportFlow.confirmImport()` → `LeadRepository.createLeads()` in **one
+  transaction** inside `busyOperationsProvider.track` (so Restart now waits).
+  A failure rolls everything back and returns to the review step.
+
 ## 8. Recording import pipeline (`src/recordings`)
 
 1. Android receives `ACTION_SEND` / `ACTION_SEND_MULTIPLE` with `audio/*`.

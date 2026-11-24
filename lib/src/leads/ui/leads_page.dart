@@ -58,7 +58,16 @@ class _LeadsPageState extends ConsumerState<LeadsPage> {
     final filter = ref.watch(leadListFilterProvider);
 
     return Scaffold(
-      appBar: AppBar(title: const Text('Leads')),
+      appBar: AppBar(
+        title: const Text('Leads'),
+        actions: [
+          IconButton(
+            tooltip: 'Import from Excel or CSV',
+            icon: const Icon(Icons.upload_file),
+            onPressed: () => context.router.push(const ImportRoute()),
+          ),
+        ],
+      ),
       floatingActionButton: FloatingActionButton.extended(
         heroTag: 'add-lead',
         onPressed: () => context.router.push(LeadFormRoute()),
@@ -136,13 +145,23 @@ class _EmptyLeads extends ConsumerWidget {
     return AppEmptyWidget(
       icon: Icons.people_outline,
       title: 'No leads yet',
-      message:
-          'Add your first prospect. Importing from Excel or CSV is '
-          'coming in the next update.',
-      action: FilledButton.icon(
-        onPressed: () => context.router.push(LeadFormRoute()),
-        icon: const Icon(Icons.person_add_alt_1),
-        label: const Text('Add lead'),
+      message: 'Add a prospect, or import a list from Excel or CSV.',
+      action: Wrap(
+        spacing: 8,
+        runSpacing: 8,
+        alignment: WrapAlignment.center,
+        children: [
+          FilledButton.icon(
+            onPressed: () => context.router.push(LeadFormRoute()),
+            icon: const Icon(Icons.person_add_alt_1),
+            label: const Text('Add lead'),
+          ),
+          OutlinedButton.icon(
+            onPressed: () => context.router.push(const ImportRoute()),
+            icon: const Icon(Icons.upload_file),
+            label: const Text('Import'),
+          ),
+        ],
       ),
     );
   }

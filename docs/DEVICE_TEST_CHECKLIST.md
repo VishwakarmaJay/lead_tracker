@@ -55,6 +55,23 @@ Make a short test call with Google Phone recording on (both parties are notified
 - [ ] Airplane mode on: everything above works except opening WhatsApp's chat.
 - [ ] Force-stop and reopen: leads and calls are still there.
 
+## H. XLSX / CSV import (Milestone 3)
+
+Copy `docs/samples/leads_sample.csv` to the phone (Downloads). For XLSX, open the same file in Excel or Google Sheets and save/download it as `.xlsx`.
+
+- [ ] Leads → **Import** icon (top right) → **Choose file**. The picker shows the CSV; pick it.
+- [ ] Match columns: Name → "Full Name", Phone → "Mobile No.", Company, Email, Source → "Lead Source", Notes → "Remarks" are pre-selected, with sample values under each.
+- [ ] Set Company to "— Not in this file —", then back. Choosing a column used by another field clears that field.
+- [ ] **Check rows**: 8 ready, 1 "Number can't be recognised", 1 "Repeated in this file", 2 "Missing name or phone", 1 blank row. Rows show row numbers and reasons.
+- [ ] Back (system back or **Back**) returns to the column screen with your choices kept.
+- [ ] Leave the import before **Import** — no leads are added.
+- [ ] Import again and press **Import 8 leads** → "Imported 8 leads" and "4 rows were skipped" (the blank row is counted separately). **View leads** shows them; the source is "LinkedIn" etc., or "Import: leads_sample.csv" where blank.
+- [ ] Import the same file again: the 8 now show under "Number already saved" and are skipped by default. Turn the switch on → "Import 8 leads" creates 8 **new** leads; the first 8 are unchanged.
+- [ ] Turn on "Import these too" for the unrecognised number → that lead shows the ⚠ icon in the list.
+- [ ] The `.xlsx` version imports the same way (phones stored as numbers in Excel come through without `.0`).
+- [ ] Pick a `.xls` or a photo (if the picker allows): a clear "Choose an Excel (.xlsx) or CSV (.csv) file" message.
+- [ ] Airplane mode on: import still works.
+
 ## C. Call-log POC
 
 Follow `docs/poc/CALL_LOG_POC.md` and fill in its results table.

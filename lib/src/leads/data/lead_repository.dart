@@ -151,6 +151,26 @@ class LeadRepository {
     }).guard();
   }
 
+  /// Normalised phone → names of active leads with that number. Used by the
+  /// import preview to flag numbers that are already saved.
+  Future<Map<String, List<String>>> activeNamesByNormalizedPhone() {
+    return Future(() async {
+      final rows = await _db.query(
+        'leads',
+        columns: ['phone_normalized', 'name'],
+        where: 'phone_normalized IS NOT NULL AND deleted_at IS NULL',
+        orderBy: 'id ASC',
+      );
+      final index = <String, List<String>>{};
+      for (final row in rows) {
+        index
+            .putIfAbsent(row['phone_normalized']! as String, () => [])
+            .add(row['name']! as String);
+      }
+      return index;
+    }).guard();
+  }
+
   static String _escapeLike(String text) => text
       .replaceAll(r'\', r'\\')
       .replaceAll('%', r'\%')
