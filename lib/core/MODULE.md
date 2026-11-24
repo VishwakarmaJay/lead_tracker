@@ -8,9 +8,15 @@
 
 | Folder | What lives here |
 | --- | --- |
+| `database/schema.dart` | Schema v1 SQL (frozen), `currentSchemaVersion`, default settings rows |
+| `database/migrations/migrations.dart` | `appMigrations` — one step per version above 1 (empty today) |
+| `database/app_database.dart` | `openAppDatabase()` — foreign keys on, create/migrate, backup before upgrade, `DatabaseTooNewException` on downgrade |
+| `database/db_value.dart` | `DbValue` enums ↔ stable strings, `DateTime.toDb()` / `dateFromDb()` (UTC ms) |
+| `instances/app_database_instance.dart` | `appDatabaseProvider` (keepAlive) — opens `<databases>/lead_tracker.db` |
+| `utils/phone_normalizer.dart` | `PhoneNormalizer` → E.164 or null (default `+91`) |
 | `constants/keys.dart` | `scaffoldMessengerKey` so notifiers can show snack bars |
 | `error/app_exception.dart` | `AppException` + `ErrorType` (`database`, `file`, `permission`, `parse`, `platform`, `other`) |
-| `extension/future.dart` | `Future.guard()` — maps file/platform/format errors to `AppException` (database branch added in Milestone 1) |
+| `extension/future.dart` | `Future.guard()` — maps database (unique/foreign-key/check messages, newer-database), file, platform, and format errors to `AppException` |
 | `extension/async_value.dart` | `AsyncValue.unfold()` — loading → `AppLoader`, error → `AppError`, data → builder |
 | `extension/context.dart` | `context.colors`, `context.text`, `context.isDark` |
 | `extension/log.dart` | `.logInfo()`, `.logSuccess()`, `.logWarning()`, `.logError()` |

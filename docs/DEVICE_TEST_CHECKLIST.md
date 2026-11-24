@@ -31,6 +31,12 @@ Make a short test call with Google Phone recording on (both parties are notified
 - [ ] **Other sender:** share an audio file from Files/WhatsApp. It is received too (note MIME type).
 - [ ] Settings → Shared files opens the same screen.
 
+## F. Database (Milestone 1)
+
+- [ ] Settings → Theme → Dark. Force-stop the app and reopen: it is still Dark (saved in SQLite).
+- [ ] Reinstall the **same** build over itself (`adb install -r …`): theme is still Dark.
+- [ ] Uninstall and reinstall: theme is back to System (fresh database).
+
 ## C. Call-log POC
 
 Follow `docs/poc/CALL_LOG_POC.md` and fill in its results table.

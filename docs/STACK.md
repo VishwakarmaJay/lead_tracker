@@ -62,9 +62,9 @@ dependencies:
   riverpod_annotation: 3.0.3       # (hedged)
   auto_route: 10.2.3               # (hedged)
 
-  sqflite: any                     # resolve on 3.38.3
-  path: any
-  path_provider: 2.1.5             # (hedged)
+  sqflite: ^2.4.2+1                # resolved on 3.38.3 (Milestone 1)
+  path: ^1.9.1                     # (Milestone 1)
+  path_provider: 2.1.5             # (hedged) — added in Milestone 4
 
   excel: any
   csv: any
@@ -91,6 +91,7 @@ dev_dependencies:
   build_runner: 2.7.1              # (hedged)
   riverpod_generator: 3.0.3        # (hedged)
   auto_route_generator: 10.2.6     # (hedged)
+  sqflite_common_ffi: ^2.4.0+3     # runs real SQLite in unit tests (Milestone 1)
 ```
 
 Notes:

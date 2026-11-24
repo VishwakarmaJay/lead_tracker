@@ -2,7 +2,22 @@
 
 **Path:** `lib/src/settings/` · **Layer:** feature
 
-- `SettingsPage` (`SettingsRoute`, tab): theme mode (System/Light/Dark), link to **Shared files**, and app version.
-- `appInfoProvider`: version + build (`package_info_plus`) and the running Shorebird patch number. Label: `1.0.0 (1) · patch 2`, or `… · updates off in this build` when Shorebird isn't active.
+## Data
 
-Later milestones add: default country code, reminders toggle, call-history availability.
+- `data/models/app_settings.dart` — `AppSettingKey` (stable table keys) and typed `AppSettings` (falls back to defaults for missing/unreadable values).
+- `data/settings_repository.dart` — `SettingsRepository`: `readAll`, `read`, `write` (insert-or-replace).
+
+## Providers
+
+- `settingsProvider` (keepAlive, `Settings` notifier) — loaded during startup. `setThemeMode` saves optimistically and rolls back on failure.
+- `appInfoProvider` — version, build, Shorebird patch number.
+
+The theme mode (`src/theme`) reads from and saves through `settingsProvider`.
+
+## UI
+
+`SettingsPage` (`SettingsRoute`, tab): theme mode, **Shared files** link, version. Later milestones add default country code, reminders toggle, call-history status.
+
+## Tests
+
+`test/settings/settings_test.dart` (including theme persisting across sessions).

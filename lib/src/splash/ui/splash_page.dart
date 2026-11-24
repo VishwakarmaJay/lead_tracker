@@ -1,6 +1,8 @@
 import 'package:auto_route/auto_route.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:lead_tracker/core/error/app_exception.dart';
+import 'package:lead_tracker/core/instances/app_database_instance.dart';
 import 'package:lead_tracker/src/recordings/providers/shared_inbox_provider.dart';
 import 'package:lead_tracker/src/routes/app_router.gr.dart';
 import 'package:lead_tracker/src/shared/components/app_error.dart';
@@ -29,8 +31,16 @@ class SplashPage extends ConsumerWidget {
     return Scaffold(
       body: startup.hasError
           ? AppError(
-              message: 'The app could not start.',
-              onRetry: () => ref.invalidate(startupProvider),
+              message: switch (startup.error) {
+                AppException(:final message) => message,
+                _ => 'The app could not start.',
+              },
+              onRetry: () {
+                // A failed database open must be retried too, not cached.
+                ref
+                  ..invalidate(appDatabaseProvider)
+                  ..invalidate(startupProvider);
+              },
             )
           : const AppLoader(),
     );

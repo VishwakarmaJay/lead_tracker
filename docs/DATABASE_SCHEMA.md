@@ -172,6 +172,14 @@ Do not store secret credentials; the app has no backend or API keys.
 - Provide an `onDowngrade` handler that fails with a clear error screen instead of crashing or wiping data.
 - Back up the database file before running any migration.
 
+Implemented in `lib/core/database/app_database.dart` (`openAppDatabase`):
+
+- The database lives in Android's databases directory (`getDatabasesPath()`), file `lead_tracker.db`.
+- Before an upgrade, the file (and any `-wal`/`-shm`/`-journal` sidecar) is copied to `<databases>/backups/lead_tracker_v<old>_<utcMillis>.db`.
+- A fresh install runs schema v1, seeds `app_settings`, then every migration, so new and upgraded installs end up identical.
+- A missing migration step fails the open instead of skipping it.
+- A newer file than the app understands throws `DatabaseTooNewException`; the splash screen shows "Your data was saved by a newer version of Lead Tracker. Install the latest release to open it." and nothing is deleted.
+
 ## 7. Audio file location
 
 ```text

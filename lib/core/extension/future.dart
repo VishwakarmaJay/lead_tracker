@@ -2,8 +2,10 @@ import 'dart:io';
 
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
+import 'package:lead_tracker/core/database/app_database.dart';
 import 'package:lead_tracker/core/error/app_exception.dart';
 import 'package:lead_tracker/core/extension/log.dart';
+import 'package:sqflite/sqflite.dart';
 
 /// Converts any failure into an [AppException] (hedged's `.guard()`, adapted
 /// for local database, file, and platform-channel errors).
@@ -13,6 +15,22 @@ extension FutureGuard<T> on Future<T> {
       return await this;
     } on AppException {
       rethrow;
+    } on DatabaseTooNewException catch (e) {
+      '$e'.logError();
+      throw AppException(
+        message:
+            'Your data was saved by a newer version of Lead Tracker. '
+            'Install the latest release to open it.',
+        type: ErrorType.database,
+        data: e,
+      );
+    } on DatabaseException catch (e) {
+      'DatabaseException (code ${e.getResultCode()})'.logError();
+      throw AppException(
+        message: _databaseMessage(e),
+        type: ErrorType.database,
+        data: kDebugMode ? e : null,
+      );
     } on FileSystemException catch (e) {
       'FileSystemException: ${e.message} (os: ${e.osError?.errorCode})'
           .logError();
@@ -39,8 +57,6 @@ extension FutureGuard<T> on Future<T> {
         data: kDebugMode ? e : null,
       );
     } on Exception catch (e, stack) {
-      // Milestone 1 adds an `on DatabaseException` branch (ErrorType.database)
-      // above this one when sqflite becomes a dependency.
       '$e\n$stack'.logError();
       throw AppException(
         message: 'Something went wrong.',
@@ -49,4 +65,19 @@ extension FutureGuard<T> on Future<T> {
       );
     }
   }
+}
+
+String _databaseMessage(DatabaseException e) {
+  final text = e.toString();
+  if (e.isUniqueConstraintError()) {
+    return 'This record already exists.';
+  }
+  if (text.contains('FOREIGN KEY constraint failed')) {
+    return 'This record is still linked to other data.';
+  }
+  if (e.isNotNullConstraintError() ||
+      text.contains('CHECK constraint failed')) {
+    return 'Some required information is missing or invalid.';
+  }
+  return 'Could not save or load your data.';
 }

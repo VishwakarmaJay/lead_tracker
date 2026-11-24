@@ -15,7 +15,7 @@ lib/
 ├── app.dart                  # MaterialApp.router, light/dark theme, scaffoldMessengerKey
 ├── core/                     # cross-cutting infra — never imports a feature
 │   ├── constants/            # keys.dart (scaffoldMessengerKey), app constants
-│   ├── database/             # app_database.dart, schema v1, migrations/
+│   ├── database/             # openAppDatabase(), schema.dart (v1), migrations/, db_value.dart
 │   ├── error/                # app_exception.dart (AppException + ErrorType)
 │   ├── extension/            # context, future (.guard), async_value (.unfold), log, datetime, string
 │   ├── instances/            # keepAlive singletons: database, notifications, share bridge channel, shorebird

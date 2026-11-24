@@ -61,7 +61,9 @@ milestone below says which one it needs.
 - Foreign keys and indexes verified; CRUD tests pass.
 - Loading, empty, and error states exist.
 
-**Ships as:** new release. It adds `sqflite` and `path_provider` (plugins with native code) and creates the first schema; every later schema change also needs a release (see `DATABASE_SCHEMA.md` §6a).
+**Ships as:** new release. It adds `sqflite` (a plugin with native code) and creates the first schema; every later schema change also needs a release (see `DATABASE_SCHEMA.md` §6a). `path_provider` is deferred to Milestone 4, where recordings need the documents directory.
+
+**Status:** code done — phone normaliser, all five repositories, persisted theme, 85 automated tests. Device check: `DEVICE_TEST_CHECKLIST.md` §F.
 
 ## Milestone 2 — Lead management
 
