@@ -43,3 +43,14 @@ app.*.map.json
 /android/app/debug
 /android/app/profile
 /android/app/release
+
+# FVM Version Cache
+.fvm/
+# Generated code (regenerate with: fvm dart run build_runner build --delete-conflicting-outputs)
+*.g.dart
+*.gr.dart
+
+# Release signing — never commit
+**/android/key.properties
+*.jks
+*.keystore

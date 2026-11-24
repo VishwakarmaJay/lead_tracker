@@ -32,6 +32,8 @@ on top of a sideloaded release APK.
 | [ANDROID_INTEGRATIONS](docs/ANDROID_INTEGRATIONS.md) | Google Phone share bridge, call-log POC, dialer, notifications, internet permission |
 | [BUILD_AND_RELEASE](docs/BUILD_AND_RELEASE.md) | Codegen, signing, Shorebird release APK, patches, restart-after-patch |
 | [IMPLEMENTATION_PLAN](docs/IMPLEMENTATION_PLAN.md) | Milestones in build order |
+| [DEVICE_TEST_CHECKLIST](docs/DEVICE_TEST_CHECKLIST.md) | Manual tests on the realme phone: share POC, signing, Shorebird patch → Restart now |
+| [poc/CALL_LOG_POC](docs/poc/CALL_LOG_POC.md) | Procedure and results for the `READ_CALL_LOG` investigation |
 | [REFERENCES](docs/REFERENCES.md) | Official links |
 
 ---
@@ -116,7 +118,9 @@ physical-device test passes.
 - Feature-first, hedged-style: `lib/src/<feature>/ui/`, `providers/`, `data/`.
   Cross-cutting infra in `lib/core/`; shared widgets/providers in `lib/src/shared/`.
 - Dependency direction: `src/<feature>` → `src/shared` → `core`. `core` never
-  imports from `src`. Features don't reach into each other's `ui/`.
+  imports a feature; its only `src/` imports are `src/theme` and
+  `src/shared/components` (for `context.colors` and `.unfold()`, as in hedged).
+  Features don't reach into each other's `ui/`.
 - **Widgets never run SQL, copy files, parse spreadsheets, or hold permission
   logic.** SQL lives only in `data/` repositories; workflows (import, attach
   recording, schedule reminder) live in services/notifiers.

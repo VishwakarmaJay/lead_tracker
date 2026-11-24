@@ -13,7 +13,7 @@ every class.
 lib/
 ├── main.dart                 # bootstrap: binding, portrait lock, runApp(ProviderScope(App()))
 ├── app.dart                  # MaterialApp.router, light/dark theme, scaffoldMessengerKey
-├── core/                     # cross-cutting infra — never imports from src/
+├── core/                     # cross-cutting infra — never imports a feature
 │   ├── constants/            # keys.dart (scaffoldMessengerKey), app constants
 │   ├── database/             # app_database.dart, schema v1, migrations/
 │   ├── error/                # app_exception.dart (AppException + ErrorType)
@@ -77,7 +77,8 @@ data/ repositories ──► core/instances (database, notifications, share brid
 
 Rules:
 
-- `core` never imports from `src`.
+- `core` never imports a feature. Its only `src/` imports are `src/theme`
+  (for `context.colors`) and `src/shared/components` (for `.unfold()`), as in hedged.
 - Features talk to SQLite only through their own repository. Another feature
   may read a repository through its provider (e.g. dashboard reads lead and
   follow-up repositories) but never imports another feature's `ui/`.

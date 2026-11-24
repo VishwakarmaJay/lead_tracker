@@ -1,6 +1,11 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Used ONLY by the Shorebird updater to check for and download patches.
+         App code makes no network requests and no user data leaves the device.
+         See docs/ANDROID_INTEGRATIONS.md §7. -->
+    <uses-permission android:name="android.permission.INTERNET" />
+
     <application
-        android:label="lead_tracker"
+        android:label="Lead Tracker"
         android:name="${applicationName}"
         android:icon="@mipmap/ic_launcher">
         <activity
@@ -23,6 +28,18 @@
             <intent-filter>
                 <action android:name="android.intent.action.MAIN"/>
                 <category android:name="android.intent.category.LAUNCHER"/>
+            </intent-filter>
+            <!-- Receive call recordings shared from Google Phone (or any app).
+                 Handled by the share bridge in MainActivity.kt. -->
+            <intent-filter>
+                <action android:name="android.intent.action.SEND" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
+            </intent-filter>
+            <intent-filter>
+                <action android:name="android.intent.action.SEND_MULTIPLE" />
+                <category android:name="android.intent.category.DEFAULT" />
+                <data android:mimeType="audio/*" />
             </intent-filter>
         </activity>
         <!-- Don't delete the meta-data below.

@@ -4,4 +4,10 @@
          to allow setting breakpoints, to provide hot reload, etc.
     -->
     <uses-permission android:name="android.permission.INTERNET"/>
+
+    <!-- Milestone 0 call-log POC only (docs/poc/CALL_LOG_POC.md).
+         Declared in DEBUG builds so we can check whether a sideloaded install
+         is allowed to hold this hard-restricted permission. It is never
+         requested at runtime and is NOT in the main/release manifest. -->
+    <uses-permission android:name="android.permission.READ_CALL_LOG"/>
 </manifest>
