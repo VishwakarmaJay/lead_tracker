@@ -1,133 +1,237 @@
-# Claude Code Instructions — Lead Tracker
+# Lead Tracker — Claude Code instructions
 
-You are implementing a small, personal, Android-only Flutter application. Read `README.md`, `PROJECT_DESCRIPTION.md`, `STACK.md`, `ARCHITECTURE.md`, `DATABASE_SCHEMA.md`, `ANDROID_INTEGRATIONS.md`, and `IMPLEMENTATION_PLAN.md` before coding.
+Personal, single-user, **Android-only** Flutter app for freelance prospecting:
+import leads from XLSX/CSV, call them through the native dialer, log call notes
+and outcomes, attach Google Phone call recordings, and schedule follow-ups.
+All data stays on the device. Updates ship as **Shorebird** over-the-air patches
+on top of a sideloaded release APK.
+
+- **Package:** `lead_tracker` · **Version:** see `pubspec.yaml` (`version: x.y.z+build`)
+- **Flutter:** `3.38.3` pinned with FVM (`.fvmrc`) — run every command as `fvm flutter …` / `fvm dart …`
+- **Flavors:** none (one build)
+- **Architecture reference:** follows the structure and patterns of the `hedged-core-app`
+  project (feature-first `lib/src/<feature>/{ui,providers}`, `lib/core/` infra,
+  Riverpod codegen, auto_route, Shorebird + restart). Lead Tracker adds a
+  `data/` folder per feature because it owns a local SQLite database instead of
+  a REST API.
+
+> This file is the map and the rules. Details live in `docs/`. Each feature
+> under `lib/src/` gets its own `MODULE.md` once it exists.
+
+---
+
+## Docs (`docs/`)
+
+| Doc | What it covers |
+| --- | --- |
+| [PROJECT_DESCRIPTION](docs/PROJECT_DESCRIPTION.md) | Product, screens, MVP scope, non-goals, acceptance criteria |
+| [STACK](docs/STACK.md) | Flutter/FVM pin, packages and versions, codegen tooling |
+| [ARCHITECTURE](docs/ARCHITECTURE.md) | Folder layout, layers, core helpers, import pipelines |
+| [CODE_PRACTICES](docs/CODE_PRACTICES.md) | Riverpod/rebuild rules, error handling, what to avoid |
+| [DATABASE_SCHEMA](docs/DATABASE_SCHEMA.md) | SQLite tables, indexes, migration rules |
+| [ANDROID_INTEGRATIONS](docs/ANDROID_INTEGRATIONS.md) | Google Phone share bridge, call-log POC, dialer, notifications, internet permission |
+| [BUILD_AND_RELEASE](docs/BUILD_AND_RELEASE.md) | Codegen, signing, Shorebird release APK, patches, restart-after-patch |
+| [IMPLEMENTATION_PLAN](docs/IMPLEMENTATION_PLAN.md) | Milestones in build order |
+| [REFERENCES](docs/REFERENCES.md) | Official links |
+
+---
+
+## Tech stack (summary — full list in STACK.md)
+
+| Concern | Choice |
+| --- | --- |
+| State + DI | Riverpod 3 with codegen (`riverpod_annotation` + `riverpod_generator`) |
+| Routing | `auto_route` (codegen, `TabsRouter` home shell) |
+| Database | SQLite via `sqflite`, wrapped by per-feature repositories |
+| Files | `path_provider` + `path`; recordings in app-private storage |
+| Import | `excel`, `csv`, `file_picker` |
+| Audio | `just_audio` (playback only), `crypto` (SHA-256) |
+| Reminders | `flutter_local_notifications` + `timezone` |
+| OTA updates | `shorebird_code_push` + `restart_app` |
+| Android bridge | Small Kotlin share-intent receiver in `MainActivity` |
+
+Codegen: `fvm dart run build_runner build --delete-conflicting-outputs`
+regenerates `*.g.dart` (Riverpod) and `*.gr.dart` (auto_route). Generated files
+are **git-ignored** (same as hedged) — regenerate after every clone, pull, or
+provider/route change. **Never edit generated files by hand.**
+
+---
 
 ## 1. Product boundaries
 
-- This is a single-user personal app, not a commercial CRM.
-- Android only for the MVP.
+- Single-user personal app, not a commercial CRM. Android only.
 - Flutter UI, SQLite database, private on-device file storage.
-- No backend, login, cloud sync, Firebase, Supabase, Appwrite, analytics, ads, paid SDKs, AI APIs, or network-dependent core workflow.
+- No backend, login, cloud sync, Firebase, Supabase, Appwrite, analytics, ads,
+  paid SDKs, AI APIs, or network-dependent core workflow.
+- **The one network exception is Shorebird.** The app may hold the
+  `INTERNET` permission so the Shorebird updater can check for and download
+  patches. No app code may make network requests, and no user data (leads,
+  notes, call logs, recordings) may ever leave the device. Every core feature
+  must work offline.
 - XLSX and CSV import are required.
-- Google Phone handles cellular call recording. Lead Tracker only receives a user-shared recording and imports it.
-- Do not implement microphone capture, cellular call audio capture, call interception, root-only access, or a workaround that bypasses Android security.
+- Google Phone records calls. Lead Tracker only receives a recording the user
+  shares and imports it.
+- Do not implement microphone capture, cellular call audio capture, call
+  interception, root-only access, or any workaround that bypasses Android security.
 
 ## 2. Critical Android permission rules
 
-`READ_CALL_LOG` is a hard-restricted Android permission. It cannot be held unless the installer on record allowlists it. Google Play further restricts Call Log permissions to apps actively registered as the default Phone or Assistant handler, subject to the published policy.
+`READ_CALL_LOG` is a hard-restricted Android permission. It cannot be held
+unless the installer on record allowlists it. Google Play further restricts Call
+Log permissions to apps registered as the default Phone or Assistant handler.
 
-Therefore:
-
-1. Do not assume a runtime permission dialog is sufficient.
+1. Do not assume a runtime permission dialog is enough.
 2. Do not make call-log sync a dependency for app usability.
-3. Build a Phase 0 proof-of-concept on the actual realme 11 Pro+ 5G before integrating call-log sync into the app.
-4. Keep the integration behind an interface such as `CallHistoryDataSource` and a feature-availability state.
-5. Do not add call-log permissions to the final manifest unless the POC has established a permitted way to grant them on the target device and the user explicitly wants the feature.
-6. Never request `WRITE_CALL_LOG`, `PROCESS_OUTGOING_CALLS`, `READ_PHONE_NUMBERS`, or contacts permissions unless a separately documented feature proves it needs them.
-7. If unavailable, expose manual call logging and recording attachment as the supported path.
+3. Prove it in the Milestone 0 POC on the real realme 11 Pro+ 5G first.
+4. Keep the integration behind `CallHistoryDataSource` with an availability state.
+5. Do not add call-log permissions to the final manifest unless the POC found a
+   permitted way to grant them and the user explicitly wants the feature.
+6. Never request `WRITE_CALL_LOG`, `PROCESS_OUTGOING_CALLS`,
+   `READ_PHONE_NUMBERS`, contacts, microphone, `MANAGE_EXTERNAL_STORAGE`, or
+   `CALL_PHONE`.
+7. If unavailable, manual call logging and recording attachment are the supported path.
 
-Do not tell the user that call history will automatically sync unless the physical-device test passes.
+Do not tell the user call history will sync automatically unless the
+physical-device test passes.
 
 ## 3. Google Phone recording integration
 
-- Google Phone is the user's installed Phone app.
-- Google Phone's automatic recording is configured by the user in Google Phone settings; Lead Tracker cannot toggle it.
-- Lead Tracker must be a target for Android `ACTION_SEND` and optionally `ACTION_SEND_MULTIPLE` for `audio/*` files.
-- Implement the Android receiving activity/intent handling carefully. Support both a cold start (`onCreate`) and an already-running app (`onNewIntent`).
-- The incoming shared file is commonly a `content://` URI with a temporary URI grant. Open it through Android `ContentResolver` and copy it into app-private cache/storage while the grant is valid. Do not store the external URI as the permanent file path.
-- Stream-copy files; do not load large recordings fully into memory.
-- Pass the copied internal path, display name, MIME type, and size to Flutter using a documented MethodChannel/EventChannel bridge. Handle both initial and subsequent intents without losing events.
-- Flutter then moves/copies the file into the permanent recordings directory and inserts metadata in SQLite. If persistence fails, retain a recoverable temp file and show an actionable error.
+- The user configures recording in Google Phone; Lead Tracker cannot toggle it.
+- Lead Tracker is a target for `ACTION_SEND` / `ACTION_SEND_MULTIPLE` with `audio/*`.
+- Handle cold start (`onCreate`) and warm start (`onNewIntent`); queue shares
+  until Flutter is listening.
+- Copy the `content://` stream into app-private cache while the grant is valid,
+  using streaming. Never store the external URI as the permanent path.
+- Pass only the cached path, display name, MIME type, and size to Dart.
+- Flutter moves the file into permanent storage and inserts metadata. If that
+  fails, keep a recoverable temp file and show an actionable error.
 - Always ask the user to confirm the lead. A suggested match is not a confirmed match.
-- Provide an in-app file-picker fallback if Google Phone's share payload or MIME type differs from expectations.
-- Do not read Google Phone's private directories or depend on a manufacturer-specific folder path.
-- Do not claim import is automatic after a call. Sharing from Google Phone is a user action.
+- Provide an in-app file-picker fallback.
+- Do not read Google Phone's private folders. Do not claim import is automatic.
+- The share bridge is native code: changing it needs a **new release APK**, not a
+  Shorebird patch.
 
-## 4. Architecture and code quality
+## 4. Architecture rules (details in ARCHITECTURE.md)
 
-- Use feature-first Clean Architecture, but keep it pragmatic. Do not introduce unnecessary abstraction layers or code generation.
-- Widgets must not run SQL or contain import, matching, file-copy, or permission business logic.
-- Use Riverpod for dependency injection and UI state.
-- Repositories own persistence operations.
-- Services own file import, phone launching, notifications, share payload processing, and optional call-history sync.
-- Keep database access behind repositories/data sources.
-- Use immutable models where practical and explicit `fromMap`/`toMap` mapping.
-- Use enums or typed value objects for lead status, temperature, call type, call outcome, and follow-up status. Persist stable string values in SQLite.
-- Use UTC Unix milliseconds for persisted timestamps; format local time only in the UI.
-- Normalise phone numbers in one tested utility. Preserve the original number as entered/imported. Use India (`IN`, `+91`) as the initial default region but make the default country code configurable; do not destroy international prefixes.
-- SQLite schema starts at version 1 and all future changes use migrations.
-- Use transactions for imports and database updates that span multiple rows.
-- Use partial unique indexes where appropriate; SQLite permits multiple NULL values in a unique index.
-- Use parameterised SQL and never concatenate user input into SQL.
-- Avoid storing audio blobs in SQLite. Store private file paths and metadata only.
+- Feature-first, hedged-style: `lib/src/<feature>/ui/`, `providers/`, `data/`.
+  Cross-cutting infra in `lib/core/`; shared widgets/providers in `lib/src/shared/`.
+- Dependency direction: `src/<feature>` → `src/shared` → `core`. `core` never
+  imports from `src`. Features don't reach into each other's `ui/`.
+- **Widgets never run SQL, copy files, parse spreadsheets, or hold permission
+  logic.** SQL lives only in `data/` repositories; workflows (import, attach
+  recording, schedule reminder) live in services/notifiers.
+- All providers use `@riverpod` / `@Riverpod(keepAlive: true)`. `keepAlive` only
+  for session-long singletons: database, router, startup, theme mode,
+  Shorebird, notifications, share bridge.
+- Repositories return typed immutable models with explicit `fromMap`/`toMap`
+  and `copyWith`. Enums persist stable string values.
+- Every repository/service call that can fail goes through `.guard()` and
+  surfaces an `AppException`. Render `AsyncValue` with `.unfold()` or
+  `.when` — never `.value!`.
+- Theme via `context.colors` / `context.text`, not `Theme.of(context)` directly.
+- Logging via `.logInfo()` / `.logError()` extensions. No `print`.
+- UTC Unix milliseconds in the database; local time only in the UI.
+- Phone normalisation lives in one tested utility. Keep the original string.
+  Default region India (`IN`, `+91`), configurable. Never destroy an
+  international prefix.
+- Schema starts at version 1; every change is a migration. Use transactions for
+  multi-row writes and parameterised SQL only. No audio BLOBs in SQLite.
 
-## 5. Dependency discipline
+## 5. Shorebird and restart-after-patch
 
-- Use `STACK.md` as the dependency baseline.
-- Before adding a dependency, check current pub.dev docs, platform support, license, latest stable version, minimum Flutter/Dart SDK, and maintenance activity.
-- Do not blindly copy old snippets for fast-moving packages such as `file_picker` or `flutter_local_notifications`; inspect the installed version's README/changelog and compile against its actual API.
-- Run `flutter pub get`, `flutter analyze`, and tests after dependency changes.
-- Do not add a dependency for a feature that can be handled cleanly with Flutter SDK or a small, well-contained Android Kotlin bridge.
-- Commit `pubspec.lock` for this application.
+- Release builds are made with `shorebird release android --artifact apk`
+  (never plain `flutter build apk` for something you install), so the APK can
+  receive patches. See BUILD_AND_RELEASE.md.
+- The `update` feature mirrors hedged's: a `Patch` notifier with states
+  `hidden → available → downloading → readyToRestart`, and a `PatchBanner`
+  shown above the home bottom navigation.
+- After a patch is downloaded, the banner offers **Restart now**, which calls
+  `Restart.restartApp(mode: RestartMode.process)`. A Shorebird patch only loads
+  on a fresh native process; the default restart mode only recreates the
+  activity, so the patch would be silently skipped.
+- Confirm the patch is staged (`isNewPatchReadyToInstall`) before offering
+  the restart. If download fails, return to `available` so the user can retry.
+- **Patches can only change Dart code and compatible assets.** Kotlin,
+  `AndroidManifest.xml`, Gradle, native plugin changes, and new plugins with
+  native code need a new release.
+- **Database schema changes ship in a full release, not a patch.** A patch can be
+  rolled back from the Shorebird console; older code would then open a newer
+  schema and fail.
+- Never restart the app while an import, recording copy, or database
+  transaction is running. Disable **Restart now** while one is in progress.
 
-## 6. UI requirements
+## 6. Dependency discipline
 
-Keep the interface simple, fast, and mobile-first. Primary sections:
+- Use STACK.md as the baseline. Versions must resolve on Flutter 3.38.3.
+- Before adding a dependency, check pub.dev docs, Android support, license,
+  minimum SDK, and maintenance.
+- Fast-moving packages (`file_picker`, `flutter_local_notifications`,
+  `shorebird_code_push`): read the installed version's API — don't copy old snippets.
+- Don't add a package for something the Flutter SDK or a small Kotlin bridge
+  can do cleanly. Don't add `permission_handler` by default.
+- Commit `pubspec.lock`.
 
-1. Dashboard
-2. Leads
-3. Calls
-4. Follow-ups
-5. Settings
+## 7. UI requirements
 
-Lead detail is a pushed route, not an extra bottom tab. Recording playback and import confirmation can be dedicated routes/dialogs.
+Bottom tabs: **Dashboard, Leads, Calls, Follow-ups, Settings** (auto_route
+`TabsRouter`). Lead detail, recording import, and recording playback are
+pushed routes. Settings shows the app version and update status.
 
-- Use Material 3.
-- Use consistent spacing, typography, and empty/error/loading states.
-- Search and filters must work on device data.
-- Do not create decorative charts or unnecessary screens.
-- Ensure forms validate phone and required name fields.
-- Confirm destructive actions such as deleting a lead or recording.
+- Material 3, consistent spacing/typography, explicit loading/empty/error states
+  via shared `AppLoader`, `AppError`, `AppEmptyWidget`.
+- Long lists use `ListView.builder`/slivers.
+- Validate name and phone in forms. Confirm destructive actions (shared
+  `AppConfirmation`).
+- No decorative charts or extra screens.
 
-## 7. Data integrity and privacy
+## 8. Data integrity and privacy
 
-- Keep all data local. Do not add internet permission unless an explicitly approved future requirement needs it.
-- Do not transmit contacts, call logs, notes, or recordings to any service.
+- Keep all user data local. Never transmit contacts, call logs, notes, or recordings.
 - Never auto-send WhatsApp messages, emails, or recordings.
-- Ask for and respect applicable consent/notice requirements for recording conversations. Google Phone may announce recording to participants; the app must not suppress or bypass that announcement.
-- Recording imports must be user initiated.
-- Store recordings in the app-private documents directory, in per-lead subdirectories using generated filenames. Do not trust incoming filenames as filesystem paths.
-- Compute SHA-256 and file size for deduplication/integrity checks.
-- Do not delete a source recording from Google Phone.
-- If a lead with recordings is deleted, use an explicit confirmation and a documented retention decision. Prefer soft deletion or block deletion until recordings are reassigned/deleted; never silently orphan audio.
-- Do not log full phone numbers, call notes, file contents, or recording paths in production logs.
+- Respect recording consent/notice rules; never suppress Google Phone's announcement.
+- Recording imports are user-initiated. Store them under
+  `recordings/lead_<id>/<generated-id>.<ext>`; never trust incoming filenames as paths.
+- Compute SHA-256 and size for dedupe/integrity. Never delete the source in Google Phone.
+- Never silently orphan audio when a lead is deleted (soft delete or block until
+  recordings are reassigned/deleted).
+- Never log full phone numbers, notes, file contents, or recording paths.
+- The release keystore and `key.properties` are never committed.
 
-## 8. Testing rules
+## 9. Testing rules
 
-For every feature:
-- add unit tests for business logic;
-- add repository/database tests using a temporary test database;
-- add widget tests for key success/error/empty states where practical;
-- run `dart format .`;
-- run `flutter analyze`;
-- run `flutter test`.
+For every feature: unit tests for logic, repository tests on a temporary
+database, widget tests for key states where practical, then
+`fvm dart format .`, `fvm flutter analyze`, `fvm flutter test`.
 
-For Android integrations, add a reproducible manual test checklist. Do not mark an Android integration complete from a mocked test alone.
+For Android integrations and Shorebird patching, write a reproducible manual
+checklist. Do not mark them complete from mocked tests alone.
 
-## 9. Implementation workflow
+## 10. Workflow and definition of done
 
-- Follow `IMPLEMENTATION_PLAN.md` in order.
-- Work one milestone at a time; do not scaffold every feature in one enormous change.
-- Before changing files, inspect the current project and preserve existing working configuration.
-- After each milestone, summarise files changed, commands run, tests passed, unresolved risks, and next milestone.
-- Do not invent API fields, permissions, or package methods. Inspect package source/docs when uncertain.
-- If a platform restriction blocks a feature, stop and report it; implement the documented fallback rather than bypassing the restriction.
+- Follow IMPLEMENTATION_PLAN.md in order, one milestone at a time.
+- Inspect the project before changing files; preserve working configuration.
+- Do not invent API fields, permissions, or package methods — check the
+  installed package source/docs.
+- If a platform restriction blocks a feature, stop, report it, and implement the
+  documented fallback.
+- A milestone is done when codegen is clean, the code compiles, format/analyze/
+  tests pass, manual device steps are documented, the feature's `MODULE.md`
+  exists, and no unrelated feature or dependency was added.
+- After each milestone, summarise files changed, commands run, results,
+  unresolved risks, and the next milestone.
 
-## 10. Definition of done
+---
 
-A milestone is done only when:
-- code compiles;
-- formatting and analysis pass;
-- relevant automated tests pass;
-- manual device steps are documented for platform integrations; and
-- no unrelated feature or dependency has been added.
+## Where does new code go?
+
+| You're adding… | Put it in |
+| --- | --- |
+| A new screen | `lib/src/<feature>/ui/<name>_page.dart` (`@RoutePage`), register in `src/routes/app_router.dart`, rerun codegen |
+| Feature state / a fetch | `lib/src/<feature>/providers/` as `@riverpod` |
+| SQL / a query | `lib/src/<feature>/data/<feature>_repository.dart` |
+| A model | `lib/src/<feature>/data/models/` (immutable, `fromMap`/`toMap`) |
+| A widget used by 2+ features | `lib/src/shared/components/` |
+| App-wide state | `lib/src/shared/providers/` |
+| A long-lived singleton (DB, notifications, share bridge, Shorebird) | `lib/core/instances/` as a `keepAlive` provider |
+| A helper or extension | `lib/core/utils/` or `lib/core/extension/` |
+| A color / text style | `lib/src/theme/`, exposed via `context.colors` / `context.text` |

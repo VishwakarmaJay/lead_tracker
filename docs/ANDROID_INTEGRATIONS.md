@@ -73,6 +73,8 @@ Implement a small Kotlin bridge in the existing Flutter `MainActivity` or a dedi
 
 Do not store the external `content://` URI as the permanent recording path. Do not request `MANAGE_EXTERNAL_STORAGE`, broad storage access, or microphone permission for this feature.
 
+The bridge is Kotlin plus manifest intent filters. **Any change to it needs a new Shorebird release APK**; a Shorebird patch cannot change native code or the manifest.
+
 ### Flutter recording import
 
 - Accept the copied temporary file.
@@ -144,3 +146,30 @@ Use `url_launcher` with `tel:` to open the default dialer. Do not use direct-cal
 ## 6. Notification permissions
 
 Request Android notification permission only when the user enables follow-up reminders. Use inexact scheduling by default; do not request exact-alarm access for the MVP. Explain that battery optimisation and OS scheduling can delay notifications.
+
+## 7. Internet permission (Shorebird only)
+
+The Flutter template declares `INTERNET` only in the debug/profile manifests. Shorebird's updater needs it in release builds, so add it to `android/app/src/main/AndroidManifest.xml`:
+
+```xml
+<uses-permission android:name="android.permission.INTERNET" />
+```
+
+Rules:
+
+- `INTERNET` exists **only** so the Shorebird updater can check for and download patches.
+- No Dart or Kotlin code in Lead Tracker may open network connections. No `http`/Dio dependency.
+- No user data (leads, notes, call logs, recordings, phone numbers) is ever sent anywhere.
+- Do not add `ACCESS_NETWORK_STATE` or connectivity packages; a failed patch check just means "no update right now".
+
+## 8. Restart after patch
+
+Shorebird loads a downloaded patch only when a **new native process** starts. `restart_app`'s default mode only recreates the activity in the same process, so the patch would be skipped and the banner would keep coming back. Use:
+
+```dart
+await Restart.restartApp(mode: RestartMode.process);
+```
+
+This launches a new task and then kills the current process. Check `restart_app`'s README for any manifest or `MainActivity` setup its installed version needs. The share bridge must cope with a restart: a share that arrived just before the restart is lost from memory, so the restart button stays disabled while a recording import is running.
+
+Device test: install the Shorebird release APK, publish a patch, open the app, tap **Update** then **Restart now**, and confirm the patched behaviour is visible and that the banner does not return.

@@ -1,163 +1,150 @@
 # Implementation Plan — Lead Tracker
 
-Build one milestone at a time. Do not generate the entire application in one pass.
+Build one milestone at a time. Do not generate the whole app in one pass.
 
-## Milestone 0 — Project bootstrap and device POCs
+Shorebird is set up in Milestone 0, so the very first APK installed on the
+phone can receive patches. After that, each milestone ships either as a
+**patch** (Dart-only changes) or a **new release** (native code, manifest,
+Gradle, new plugins with native code, or a database schema change). Each
+milestone below says which one it needs.
+
+## Milestone 0 — Bootstrap, architecture skeleton, Shorebird, device POCs
 
 ### Deliverables
 
-- Create Android-only Flutter project.
-- Confirm Flutter/Dart/Android toolchain with `flutter doctor -v`.
-- Add baseline dependencies and commit `pubspec.lock`.
-- Create Material 3 theme and bottom navigation shell.
-- Build a tiny Android share-intent proof-of-concept to receive one Google Phone audio recording.
-- Separately investigate whether `READ_CALL_LOG` can be held by the intended install method on the realme device.
+**Toolchain and project**
+- Pin Flutter 3.38.3 with FVM (`.fvmrc`); confirm with `fvm flutter doctor -v`.
+- Decide the final Android `applicationId` (currently `com.example.lead_tracker`). It must not change after the first release: a new id is a different app and the old one's local data would be stranded.
+- Add the baseline dependencies from `STACK.md` that the skeleton needs (Riverpod + generator, auto_route + generator, build_runner, `shorebird_code_push`, `restart_app`, `package_info_plus`). Commit `pubspec.lock`.
+- Copy hedged's `analysis_options.yaml` rules (without `custom_lint`). Git-ignore `*.g.dart` / `*.gr.dart`.
+
+**Architecture skeleton (hedged-style)**
+- `lib/core/`: `error/app_exception.dart`, `extension/` (`future.dart` `.guard()`, `async_value.dart` `.unfold()`, `context.dart`, `log.dart`), `constants/keys.dart`.
+- `lib/src/theme/`: Material 3 light/dark theme with `BaseColorExtension` and typography extension; `context.colors` / `context.text`.
+- `lib/src/shared/components/`: `AppLoader`, `AppError`, `AppEmptyWidget`, `AppConfirmation`, snack bar helper.
+- `lib/src/routes/app_router.dart` with `keepAlive` `appRouterProvider`; `SplashRoute` → `HomeRoute` `TabsRouter` with placeholder Dashboard, Leads, Calls, Follow-ups, Settings pages.
+- `MODULE.md` for each folder created.
+
+**Shorebird + restart after patch**
+- `shorebird init` under the personal Shorebird account → commit `shorebird.yaml`.
+- Release signing: create a keystore, `android/key.properties` (git-ignored), signing config in Gradle. Back up the keystore outside the repo.
+- Add `INTERNET` to the main manifest (Shorebird only).
+- `src/update/`: `shorebirdProvider`, `Patch` notifier (`hidden → available → downloading → readyToRestart`), `PatchBanner` above the home bottom navigation, `restart()` using `RestartMode.process`.
+- Settings placeholder shows version and patch status.
+
+**Device POCs**
+- Tiny share-intent receiver: Google Phone shares one recording, the Kotlin bridge copies the `content://` URI into app cache, and a debug screen shows file name, MIME type, size, and cache path.
+- Separately investigate whether `READ_CALL_LOG` can be held with the sideload install method on the realme device. Document the result; do not build a bypass.
 
 ### Exit criteria
 
-- Debug APK installs and launches on realme 11 Pro+ 5G.
-- Google Phone can share a test recording to the app and the native bridge can copy the content URI into app cache.
-- Call-log permission outcome is documented. If blocked, record the blocker and continue with manual call logs; do not block the project.
+- `shorebird release android --artifact apk --flutter-version=3.38.3` produces a release APK that installs and launches on the realme 11 Pro+ 5G.
+- A test patch (e.g. a visible text change) is published with `shorebird patch android`; the banner appears, **Update** downloads it, **Restart now** relaunches into the patched code, and the banner does not come back.
+- Google Phone can share a recording to the app and the bridge copies it into cache (cold and warm start).
+- Call-log permission outcome is documented. If blocked, continue with manual call logs.
+- Codegen, format, analyze, and tests pass.
+
+**Ships as:** first release (`1.0.0+1`).
 
 ## Milestone 1 — Foundation and SQLite
 
 ### Deliverables
 
-- Feature-first folder structure.
-- Riverpod setup and provider wiring.
-- SQLite database open/close lifecycle.
-- Version-1 schema and migration framework.
-- Typed models and repositories for leads, call logs, follow-ups, and recording metadata.
-- Database/repository tests.
+- `core/database/`: open/close lifecycle, schema version 1, migration framework, `onDowngrade` guard, foreign keys on.
+- `keepAlive` `appDatabaseProvider`; `startupProvider` opens the DB before `HomeRoute`.
+- Typed models and repositories in each feature's `data/` for leads, call logs, follow-ups, recording metadata, and settings.
+- Repository and migration tests on a temporary database.
 
 ### Exit criteria
 
-- Database survives app restart.
-- Foreign keys and indexes are verified.
-- CRUD repository tests pass.
-- UI has loading, empty, and error states.
+- Database survives app restart and patch restart.
+- Foreign keys and indexes verified; CRUD tests pass.
+- Loading, empty, and error states exist.
+
+**Ships as:** new release. It adds `sqflite` and `path_provider` (plugins with native code) and creates the first schema; every later schema change also needs a release (see `DATABASE_SCHEMA.md` §6a).
 
 ## Milestone 2 — Lead management
 
 ### Deliverables
 
-- Leads list.
-- Search and filters.
-- Add/edit lead form.
-- Lead detail screen.
+- Leads list with search and filters (`ListView.builder`).
+- Add/edit lead form with validation; lead detail route.
 - Status and temperature controls.
-- Native dialer action with `tel:`.
-- Manual call log creation and call summary.
+- Dialer via `url_launcher` `tel:`; WhatsApp `wa.me` link when safe.
+- Manual call log creation and summary; lead timeline.
 
 ### Exit criteria
 
-- User can create and manage leads without internet.
-- Tap-to-call opens the native dialer.
-- A manual call entry appears in the lead timeline.
+- Leads can be managed offline; tap-to-call opens the dialer; manual calls appear in the timeline.
+
+**Ships as:** release if `url_launcher` is new to the build (native plugin), otherwise patch.
 
 ## Milestone 3 — XLSX and CSV import
 
 ### Deliverables
 
-- File picker integration.
-- XLSX and CSV parsers.
-- Column mapping/alias handling.
-- Validation and duplicate preview.
-- Transactional bulk insert.
-- Import result summary.
+- File picker, XLSX and CSV parsers (off the UI thread).
+- Column mapping with aliases; validation and duplicate preview.
+- Transactional bulk insert; result summary.
 
 ### Exit criteria
 
-- A representative XLSX and CSV file import correctly.
-- Invalid rows and duplicate candidates are reported.
-- Cancellation causes no partial insert.
-- Import works offline.
+- Representative XLSX and CSV files import correctly; invalid rows and duplicates are reported; cancelling leaves no partial insert; works offline.
+
+**Ships as:** release (`file_picker` has native code). `excel`/`csv` alone would be patchable.
 
 ## Milestone 4 — Google Phone recording import
 
 ### Deliverables
 
-- ACTION_SEND and ACTION_SEND_MULTIPLE audio intent support.
-- Kotlin bridge for `content://` stream copying.
-- Cold-start and warm-start share handling.
-- Flutter import confirmation screen.
-- Lead selection and optional call-log linking.
-- Private permanent file storage.
-- SHA-256 duplicate detection.
-- Recording playback and deletion.
-- Manual audio file-picker fallback.
+- Production version of the `ACTION_SEND` / `ACTION_SEND_MULTIPLE` Kotlin bridge (cold/warm start, queued shares).
+- Import confirmation screen; lead selection and optional call-log link.
+- Permanent private storage; SHA-256 duplicate detection.
+- Playback (`just_audio`) and deletion; file-picker fallback.
+- Restart button disabled while an import is running.
 
 ### Exit criteria
 
-- Real Google Phone recording can be shared into the app on the realme device.
-- File is copied into app-private storage and remains playable after the share source is no longer used.
-- Wrong-client attachment is prevented by explicit user confirmation.
-- Duplicate import is detected.
-- Failed imports do not silently lose the file.
+- A real Google Phone recording is shared in, copied to private storage, and still plays after the source is gone.
+- Wrong-client attachment is prevented by confirmation; duplicates are detected; failed imports never silently lose the file.
+
+**Ships as:** release (Kotlin + `just_audio`).
 
 ## Milestone 5 — Optional Android call-history sync
 
-Only implement if Milestone 0 POC passed.
+Only if the Milestone 0 POC passed.
 
-### Deliverables if available
+- `CallHistoryDataSource` adapter, availability UI, foreground sync on resume and **Sync Now**, overlap window, dedupe, ambiguous-match resolution.
+- Exit: real call entries read repeatedly without duplicates; restricted state handled; manual calls still work.
 
-- `CallHistoryDataSource` adapter.
-- Permission/availability UI.
-- Foreground sync on app resume and manual Sync Now.
-- Recent-window sync with overlap.
-- System-record deduplication.
-- Phone number matching and ambiguity resolution.
-
-### Exit criteria
-
-- Real device call entries are read repeatedly without duplicate insertion.
-- Permission-denied/restricted state is handled gracefully.
-- Manual calls remain supported.
-
-If POC fails, mark this milestone blocked/not supported and retain manual call logging.
+**Ships as:** release (`call_log` plugin + manifest permission). If the POC failed, mark this milestone blocked.
 
 ## Milestone 6 — Follow-ups and reminders
 
-### Deliverables
+- Create/edit/reschedule/complete/cancel; Today, Overdue, Upcoming, Completed views.
+- Local notifications with IDs stored in SQLite; notification permission only when reminders are enabled.
+- Exit: follow-ups persist; completing/cancelling cancels the notification; permission denial doesn't break follow-ups.
 
-- Create/edit/reschedule/complete/cancel follow-ups.
-- Today, overdue, upcoming, and completed views.
-- Local notifications with notification IDs stored in SQLite.
-- Notification permission handling.
-
-### Exit criteria
-
-- Follow-ups persist across restart.
-- Completing/cancelling a follow-up cancels its scheduled notification.
-- Permission denial does not break follow-up management.
+**Ships as:** release (`flutter_local_notifications` + manifest receivers).
 
 ## Milestone 7 — Dashboard, backup, and hardening
 
-### Deliverables
+- Dashboard metrics and recent activity from SQLite.
+- Local backup/export of database and recordings; restore with validation.
+- Storage usage view and safe deletion; error-state polish and accessibility pass.
+- Device test checklist, including a patch + restart run.
+- Exit: offline core flow works; backup includes DB and recordings; restore passes on a clean install; format/analyze/tests pass; device smoke tests pass.
 
-- Dashboard metrics and recent activity.
-- Local export/backup of database and recording files.
-- Restore flow with validation and conflict strategy.
-- Storage usage view and safe deletion.
-- Error-state polish and accessibility pass.
-- Device test checklist.
+**Ships as:** patch if no new native plugins are added; otherwise release.
 
-### Exit criteria
+## Per-milestone checklist
 
-- App's core flow works offline.
-- Database and recording files are both included in backup.
-- Restore test passes on a clean app install.
-- `dart format .`, `flutter analyze`, and `flutter test` pass.
-- Physical-device smoke tests pass.
-
-## Per-milestone engineering checklist
-
-- [ ] Inspect existing project files before editing.
+- [ ] Inspect existing files before editing.
 - [ ] Implement only the current milestone.
+- [ ] `fvm dart run build_runner build --delete-conflicting-outputs`.
 - [ ] Add/update tests.
-- [ ] Run `dart format .`.
-- [ ] Run `flutter analyze`.
-- [ ] Run `flutter test`.
-- [ ] Build Android debug APK where relevant.
+- [ ] `fvm dart format .`, `fvm flutter analyze`, `fvm flutter test`.
+- [ ] Add/update the feature's `MODULE.md`.
+- [ ] Decide **patch or release** (see `BUILD_AND_RELEASE.md`) and ship it.
 - [ ] Document manual test steps and limitations.
 - [ ] Summarise files changed, commands run, results, and next milestone.

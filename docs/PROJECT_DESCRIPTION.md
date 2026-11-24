@@ -27,6 +27,7 @@ Lead Tracker keeps this information in one local client history.
 - Phone app: Google Phone, confirmed by the user.
 - Call recording source: Google Phone's built-in call recording and its Android Share action.
 - Storage: local SQLite database and private app file storage.
+- Distribution: a release APK built with Shorebird and sideloaded onto the device. Later Dart-only changes arrive as Shorebird over-the-air patches.
 
 Do not build iOS or web support in this MVP. Keep business logic reasonably platform-independent, but Android is the only supported delivery target.
 
@@ -100,6 +101,23 @@ Recording import may be launched from Android's share sheet or from an in-app fi
 - Play, rename/display, and delete the local copy.
 - Show import errors clearly; never silently discard a file.
 
+### 5.7 Settings
+
+- Default country code / region for phone normalisation.
+- Follow-up reminder toggle (asks for notification permission when turned on).
+- Theme mode (light/dark/system).
+- Call-history availability status (only meaningful if the POC passed).
+- App version and Shorebird patch status.
+
+### 5.8 App updates (Shorebird)
+
+Same pattern as the hedged-core-app project:
+
+- When a patch is available, a slim banner above the bottom navigation says "A new update is available" with an **Update** button.
+- After download, the banner switches to "Update ready" with **Restart now**, which relaunches the app process so the patch takes effect.
+- If the user ignores the banner, the patch still applies on the next cold start.
+- The banner never blocks the app. Restart is disabled while an import or recording copy is in progress.
+
 ## 6. Lead classification
 
 Keep lead status and lead temperature as separate fields.
@@ -152,10 +170,12 @@ Do not infer a call disposition from call duration or call type. Android call me
 11. Create and manage follow-ups and local notifications.
 12. Provide a simple dashboard.
 13. Provide a local backup/export path before calling the MVP production-ready.
+14. Receive Shorebird patches and let the user apply them with an in-app restart.
 
 ## 9. Non-functional requirements
 
-- Local-first: the core app works without an internet connection.
+- Local-first: the core app works without an internet connection. The only network use is the Shorebird updater; no user data ever leaves the device.
+- Architecture follows the hedged-core-app structure: feature-first, Riverpod 3 codegen, auto_route (see `ARCHITECTURE.md`).
 - No account, backend, or subscription.
 - All SQLite access is through repositories/data sources, never directly from widgets.
 - Use transactions for bulk imports and multi-step file/database operations where possible.
@@ -181,6 +201,7 @@ Do not build these in the MVP:
 - complex sales pipeline/kanban;
 - integrations with paid CRM platforms;
 - cloud sync;
+- Play Store distribution or flavors (one sideloaded build);
 - web or iOS application.
 
 ## 11. Acceptance criteria
@@ -198,7 +219,8 @@ The MVP is acceptable when:
 - the recording remains playable after the original shared URI is no longer available;
 - duplicate recording imports are detected by checksum;
 - follow-ups can be scheduled and completed;
-- the app works without network access for core features; and
-- data survives app restarts.
+- the app works without network access for core features;
+- data survives app restarts; and
+- a Shorebird patch published to the release is downloaded, applied with **Restart now**, and keeps all existing data.
 
 Android system call-log reading is not an acceptance blocker unless the Phase 0 permission proof-of-concept succeeds. The app must work without it.

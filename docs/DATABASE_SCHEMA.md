@@ -150,6 +150,7 @@ Suggested keys:
 - `last_call_history_sync_at` = UTC epoch milliseconds
 - `call_history_sync_enabled` = `false` until the permission POC succeeds
 - `notification_enabled` = `true` or `false`
+- `theme_mode` = `system`, `light`, or `dark`
 
 Do not store secret credentials; the app has no backend or API keys.
 
@@ -163,6 +164,13 @@ Do not store secret credentials; the app has no backend or API keys.
 - Avoid storing derived counters; calculate dashboard totals with SQL queries.
 - Use UTC milliseconds for persisted dates and convert to local time in presentation.
 - Write migration tests and repository tests.
+- The database is opened by a `keepAlive` `appDatabaseProvider` in `lib/core/instances/`. Only repositories in each feature's `data/` folder use it.
+
+## 6a. Schema changes and Shorebird patches
+
+- **Ship schema changes (a new `version` + `onUpgrade` step) only in a full Shorebird release, never in a patch.** A patch can be rolled back from the Shorebird console. If a patch had already migrated the database, the older code would open a newer schema and `sqflite` would fail on downgrade.
+- Provide an `onDowngrade` handler that fails with a clear error screen instead of crashing or wiping data.
+- Back up the database file before running any migration.
 
 ## 7. Audio file location
 
