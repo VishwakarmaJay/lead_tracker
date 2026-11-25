@@ -17,6 +17,8 @@
 | `LeadFormRoute(leadId?)` | `/lead-form` | `src/leads/ui/lead_form_page.dart` |
 | `ImportRoute` | `/import` | `src/imports/ui/import_page.dart` |
 | `SharedInboxRoute` | `/shared-inbox` | `src/recordings/ui/shared_inbox_page.dart` |
+| `RecordingImportRoute(recording, initialLeadId?)` | `/recording-import` | `src/recordings/ui/recording_import_page.dart` |
+| `RecordingPlayerRoute(recordingId)` | `/recordings/:id` | `src/recordings/ui/recording_player_page.dart` |
 
 No guards — there is no login. Adding a page: `@RoutePage()` → register here → run codegen.
 

@@ -1,27 +1,53 @@
 # recordings
 
-**Path:** `lib/src/recordings/` · **Layer:** feature
+**Path:** `lib/src/recordings/` · **Layer:** feature · **Status:** Milestone 4 code done
 
-## Data (Milestone 1)
+Google Phone call recordings (shared in) and audio files (picked), attached to a lead, stored privately, played back.
+
+## Flow
+
+1. **Share in** — Google Phone → Share → Lead Tracker. The Kotlin bridge copies the file into a durable inbox (`filesDir/shared_imports`) and the home shell opens **Shared recordings**.
+2. **Shared recordings** (`SharedInboxRoute`, `ui/shared_inbox_page.dart`) — every recording still waiting, even after the app was closed. **Save to a lead** or **Discard** (the Google Phone original is never touched). Failed shares show their reason and can be dismissed. Empty state offers **Pick an audio file**.
+3. **Save recording** (`RecordingImportRoute(recording, initialLeadId?)`, `ui/recording_import_page.dart`) — listen to it, choose the lead (picker; leads called in the last 24 h as shortcuts — never guessed from the file name), optionally link one of that lead's calls, add notes, **Save to <lead>**. A duplicate opens "Already saved" → Open it / Discard this copy.
+4. **Lead timeline** — recordings appear with the calls (`RecordingTile`); a call with a recording shows a waveform icon.
+5. **Player** (`RecordingPlayerRoute(recordingId)` `/recordings/:id`, `ui/recording_player_page.dart`) — play/pause, seek, 1×/1.5×/2×, lead, saved date, original name, notes, linked call (change it), delete.
+
+Fallback: lead detail → **Add recording** picks an audio file and opens step 3 with that lead chosen.
+
+## Import rules (`services/recording_import_service.dart`)
+
+- Exists, not empty, ≤ 200 MB, supported format (`data/audio_formats.dart`: MIME first, then extension; stored extension comes only from that table).
+- SHA-256 streamed in a background isolate; an already-imported checksum returns `RecordingAlreadyImported` and saves nothing.
+- `AudioProbe` (just_audio) reads the duration; a file the phone can't play is still saved, flagged `playable: false`.
+- **Copies** to `recordings/lead_<id>/<random>.<ext>` (via `.part` + rename), then inserts the row. If the insert fails the copy is removed and the original stays, so the user can retry.
+- The service never deletes the original. `RecordingImportController` removes the inbox copy (or the picker's temp copy) only after a successful import. Runs inside `busyOperationsProvider.track`, so **Restart now** waits.
+- Delete: row first, then file (a leftover file is harmless; storage cleanup is Milestone 7).
+
+## Providers
+
+- `sharedInboxProvider` (keepAlive) — `pull()` merges new shares (`takePending`) with what is on disk (`listCached`); `discard()`. `mergeInbox()` is the pure merge.
+- `recordingImportControllerProvider` — `save(...)`, `discardSource(...)`.
+- `recordingDetailProvider(id)` — `updateNotes`, `linkToCall`, `saveDuration` (only if unknown), `delete`.
+- `recordingFileProvider(relativePath)` — absolute `File`.
+- `recordingImportServiceProvider`, `recordingStorageProvider`, `audioProbeProvider` — overridable in tests.
+
+## Public for other features
+
+- `ui/components/recording_tile.dart` — `RecordingTile` (lead timeline).
+- `ui/components/recording_player.dart` — `RecordingPlayer(path, onDuration)`, `formatClock`.
+- `ui/shared_inbox_page.dart` — `pickAudioAndImport(context, ref, leadId:)` (lead detail's Add recording).
+
+## Data
 
 - `data/models/call_recording.dart` — `CallRecording`, `CallRecordingDraft`, `RecordingImportSource`.
-- `data/call_recording_repository.dart` — `CallRecordingRepository` / `callRecordingRepositoryProvider`: `createRecording` (SHA-256 unique → "This record already exists."), `getRecordingById`, `findBySha256`, `listForLead`, `linkToCallLog`, `updateNotes`, `deleteRecordingRow`. Metadata only; files are handled by the Milestone 4 import service.
-- A lead with recordings can't be removed (`ON DELETE RESTRICT`); deleting a call keeps its recordings (`SET NULL`).
-- Tests: `test/recordings/call_recording_repository_test.dart`.
-
-## Milestone 0 (proof of concept)
-
-- `sharedInboxProvider` (keepAlive — owns the share-event subscription for the session): holds `SharedFilePayload`s taken from the Kotlin queue. `pull()` takes queued shares; `discard()` deletes the cached copy (Kotlin refuses paths outside `cache/shared_imports/`).
-- `SharedInboxPage` (`SharedInboxRoute`): one card per share with name, MIME type, size, received time, shared text, cache path, or the error. Discard asks for confirmation and never touches the original in Google Phone.
+- `data/models/pending_recording.dart` — `PendingRecording` (path, origin, name, MIME, size, inbox item).
+- `data/call_recording_repository.dart` — create (SHA-256 unique), get, `findBySha256`, `listForLead`, `linkToCallLog`, `updateNotes`, `updateDuration`, `deleteRecordingRow`.
+- `data/recording_storage.dart` — `RecordingStorage` (`resolve`, `copyIn`, `delete`), `sha256OfFile`.
 
 ## Native side
 
-`android/app/src/main/kotlin/com/vishwakarmajay/leadtracker/ShareBridge.kt` (`ShareIntake` + `ShareBridge`), intent filters in `AndroidManifest.xml`:
+`android/app/src/main/kotlin/com/vishwakarmajay/leadtracker/ShareBridge.kt` — see ANDROID_INTEGRATIONS.md §3. Methods: `takePending`, `listCached`, `deleteCached`; event channel signals new shares.
 
-- Handles `ACTION_SEND` / `ACTION_SEND_MULTIPLE` with `audio/*` on cold start (`onCreate`, skipping re-delivered intents) and warm start (`onNewIntent`).
-- Stream-copies each `content://` URI on a background thread into `cache/shared_imports/<uuid>.<ext>`; extension from MIME type only; 200 MB cap; free-space check.
-- Every share yields a payload; failures carry an `error` string instead of being dropped.
+## Tests
 
-## Milestone 4 replaces
-
-Discard-only inbox → real import (lead confirmation, permanent storage, SHA-256, playback) and adds stale-cache cleanup.
+`test/recordings/` — formats, import service (copy, checksum, duplicates, unplayable, bad files, failed insert keeps the original, delete), inbox merge and channel calls, controller (inbox copy cleared only on success), player-screen actions. `test/leads/timeline_test.dart` — call/recording ordering.

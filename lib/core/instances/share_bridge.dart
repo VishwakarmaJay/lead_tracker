@@ -49,11 +49,12 @@ class SharedFilePayload {
   bool get isFailed => error != null;
 }
 
-/// Dart side of the Kotlin share bridge in `MainActivity.kt`.
+/// Dart side of the Kotlin share bridge (`ShareBridge.kt`).
 ///
-/// Kotlin keeps received shares in a queue until Dart takes them, so a
-/// cold-start share is never lost. The event channel only signals that the
-/// queue has new items; Dart then calls [takePending].
+/// Successful shares are copied into a durable inbox (`listCached`). New
+/// shares — including failures, which have no file — are also queued in
+/// memory until Dart takes them ([takePending]). The event channel only
+/// signals that the queue has new items.
 class ShareBridge {
   const ShareBridge();
 
@@ -69,7 +70,17 @@ class ShareBridge {
     ];
   }
 
-  /// Deletes a cached copy. Kotlin refuses paths outside its share cache.
+  /// Every copy still in the inbox, including ones from earlier sessions
+  /// (the inbox lives in `filesDir`, so it survives the app being killed).
+  Future<List<SharedFilePayload>> listCached() async {
+    final raw = await _methods.invokeListMethod<Object?>('listCached');
+    return [
+      for (final item in raw ?? const <Object?>[])
+        SharedFilePayload.fromMap(item! as Map<Object?, Object?>),
+    ];
+  }
+
+  /// Deletes a copy and its metadata. Kotlin refuses paths outside the inbox.
   Future<void> deleteCached(String cachePath) async {
     await _methods.invokeMethod<void>('deleteCached', {'path': cachePath});
   }

@@ -71,8 +71,8 @@ dependencies:
   file_picker: ^11.0.3             # Milestone 3 — 13.x needs a newer Flutter than 3.38.3
 
   url_launcher: 6.3.2              # (hedged) — added in Milestone 2
-  just_audio: any
-  crypto: any
+  just_audio: ^0.10.6              # Milestone 4
+  crypto: ^3.0.8                   # Milestone 4
 
   flutter_local_notifications: 19.5.0   # (hedged)
   timezone: any

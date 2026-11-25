@@ -13,6 +13,7 @@ import android.webkit.MimeTypeMap
 import io.flutter.plugin.common.BinaryMessenger
 import io.flutter.plugin.common.EventChannel
 import io.flutter.plugin.common.MethodChannel
+import org.json.JSONObject
 import java.io.File
 import java.io.FileNotFoundException
 import java.io.FileOutputStream
@@ -22,17 +23,27 @@ import java.util.concurrent.Executors
 
 /**
  * Receives files shared into the app (Google Phone call recordings) and copies
- * them into app-private cache while the temporary content:// grant is valid.
+ * them into an app-private inbox while the temporary content:// grant is valid.
  *
- * Shares are queued process-wide until Dart takes them, so a cold-start share
- * is never lost before Flutter is listening. Every share produces a payload;
- * failures carry an `error` instead of being dropped.
+ * The inbox is durable: `filesDir/shared_imports` (Android never clears it,
+ * unlike `cacheDir`), each copy is written as `<id>.part` and renamed when
+ * complete, and a `<id>.json` sidecar keeps its metadata. So a share that
+ * isn't imported yet survives the app being closed or killed; Dart lists it
+ * again with `listCached`. A copy is removed only when Dart imports or
+ * discards it (`deleteCached`).
+ *
+ * New shares are also queued in memory so Dart hears about them at once.
+ * Every share produces a payload; failures carry an `error` (failures are not
+ * persisted — there is no file to keep).
  *
  * Native code: any change here needs a new Shorebird release, not a patch.
  */
 object ShareIntake {
     private const val TAG = "LeadTrackerShare"
-    private const val CACHE_DIR = "shared_imports"
+    private const val INBOX_DIR = "shared_imports"
+
+    /** Half-written copies older than this are from a crash; removed. */
+    private const val STALE_PART_MS = 24L * 60 * 60 * 1000
 
     /** Upper bound for one shared file. Call recordings are far smaller. */
     private const val MAX_BYTES = 200L * 1024 * 1024
@@ -48,7 +59,7 @@ object ShareIntake {
     @Volatile
     var onQueued: (() -> Unit)? = null
 
-    fun shareDir(context: Context): File = File(context.cacheDir, CACHE_DIR)
+    fun shareDir(context: Context): File = File(context.filesDir, INBOX_DIR)
 
     fun handle(context: Context, intent: Intent?) {
         val action = intent?.action ?: return
@@ -80,14 +91,90 @@ object ShareIntake {
 
     fun hasPending(): Boolean = synchronized(queue) { queue.isNotEmpty() }
 
-    /** Deletes a cached copy. Refuses anything outside the share cache. */
+    /**
+     * Every copy in the inbox, including ones from earlier app sessions.
+     * A copy without a sidecar (the app died between copy and sidecar) is
+     * still listed, with what the file itself can tell.
+     */
+    fun listCached(context: Context): List<Map<String, Any?>> {
+        val dir = shareDir(context)
+        val files = dir.listFiles() ?: return emptyList()
+        val now = System.currentTimeMillis()
+        val items = mutableListOf<Map<String, Any?>>()
+        for (file in files) {
+            val name = file.name
+            when {
+                name.endsWith(".part") -> {
+                    if (now - file.lastModified() > STALE_PART_MS) file.delete()
+                }
+                name.endsWith(".json") -> {}
+                file.isFile -> {
+                    val id = name.substringBeforeLast('.')
+                    val sidecar = File(dir, "$id.json")
+                    items.add(
+                        readSidecar(sidecar, file)
+                            ?: payload(
+                                id,
+                                file.absolutePath,
+                                null,
+                                MimeTypeMap.getSingleton().getMimeTypeFromExtension(file.extension),
+                                file.length(),
+                                null,
+                                null,
+                                file.lastModified(),
+                            ),
+                    )
+                }
+            }
+        }
+        return items.sortedBy { it["receivedAt"] as Long }
+    }
+
+    /** Deletes a copy and its sidecar. Refuses anything outside the inbox. */
     fun deleteCached(context: Context, path: String): Boolean {
         val dir = shareDir(context).canonicalFile
         val file = File(path).canonicalFile
-        if (file.parentFile != dir) {
+        if (file.parentFile != dir || file.name.endsWith(".json")) {
             return false
         }
+        File(dir, "${file.name.substringBeforeLast('.')}.json").delete()
         return !file.exists() || file.delete()
+    }
+
+    /** Removes the old Milestone 0 location (`cacheDir/shared_imports`). */
+    fun removeLegacyCache(context: Context) {
+        File(context.cacheDir, INBOX_DIR).takeIf { it.exists() }?.deleteRecursively()
+    }
+
+    private fun readSidecar(sidecar: File, file: File): Map<String, Any?>? {
+        if (!sidecar.exists()) return null
+        return try {
+            val json = JSONObject(sidecar.readText())
+            fun text(key: String): String? = if (json.isNull(key)) null else json.optString(key)
+            payload(
+                json.getString("id"),
+                file.absolutePath,
+                text("displayName"),
+                text("mimeType"),
+                file.length(),
+                text("sharedText"),
+                null,
+                json.getLong("receivedAt"),
+            )
+        } catch (e: Exception) {
+            Log.w(TAG, "Unreadable share metadata: ${e.javaClass.simpleName}")
+            null
+        }
+    }
+
+    private fun writeSidecar(dir: File, payload: Map<String, Any?>) {
+        val json = JSONObject()
+        for (key in listOf("id", "receivedAt", "displayName", "mimeType", "sharedText")) {
+            json.put(key, payload[key] ?: JSONObject.NULL)
+        }
+        val part = File(dir, "${payload["id"]}.json.part")
+        part.writeText(json.toString())
+        part.renameTo(File(dir, "${payload["id"]}.json"))
     }
 
     private fun extractUris(intent: Intent): List<Uri> {
@@ -161,10 +248,12 @@ object ShareIntake {
 
         val id = UUID.randomUUID().toString()
         val target = File(dir, "$id.${safeExtension(mime)}")
+        // Written under a temporary name so a half-copied file is never listed.
+        val part = File(dir, "$id.part")
         return try {
             val copied =
                 resolver.openInputStream(uri)?.use { input ->
-                    FileOutputStream(target).use { output ->
+                    FileOutputStream(part).use { output ->
                         val buffer = ByteArray(64 * 1024)
                         var total = 0L
                         while (true) {
@@ -179,19 +268,29 @@ object ShareIntake {
                 } ?: throw FileNotFoundException("no stream")
 
             if (copied == 0L) {
-                target.delete()
+                part.delete()
                 failure("The shared file is empty.", displayName, mime, sharedText)
+            } else if (!part.renameTo(target)) {
+                part.delete()
+                failure("Copying the file failed.", displayName, mime, sharedText)
             } else {
-                payload(id, target.absolutePath, displayName, mime, copied, sharedText, null)
+                val result = payload(id, target.absolutePath, displayName, mime, copied, sharedText, null)
+                try {
+                    writeSidecar(dir, result)
+                } catch (e: IOException) {
+                    // The copy is still listed, just with less metadata.
+                    Log.w(TAG, "Could not write share metadata")
+                }
+                result
             }
         } catch (e: SecurityException) {
-            target.delete()
+            part.delete()
             failure("Permission to read the file has expired. Share it again.", displayName, mime, sharedText)
         } catch (e: FileNotFoundException) {
-            target.delete()
+            part.delete()
             failure("The shared file could not be opened.", displayName, mime, sharedText)
         } catch (e: IOException) {
-            target.delete()
+            part.delete()
             val message =
                 if (e.message == "too large") "The file is too large (over 200 MB)." else "Copying the file failed."
             failure(message, displayName, mime, sharedText)
@@ -215,10 +314,11 @@ object ShareIntake {
         size: Long?,
         sharedText: String?,
         error: String?,
+        receivedAt: Long = System.currentTimeMillis(),
     ): Map<String, Any?> =
         mapOf(
             "id" to id,
-            "receivedAt" to System.currentTimeMillis(),
+            "receivedAt" to receivedAt,
             "cachePath" to path,
             "displayName" to name,
             "mimeType" to mime,
@@ -231,9 +331,11 @@ object ShareIntake {
 /** Platform channels for [ShareIntake]. Dart side: lib/core/instances/share_bridge.dart. */
 class ShareBridge(private val context: Context) {
     fun attach(messenger: BinaryMessenger) {
+        ShareIntake.removeLegacyCache(context)
         MethodChannel(messenger, "lead_tracker/share").setMethodCallHandler { call, result ->
             when (call.method) {
                 "takePending" -> result.success(ShareIntake.takePending())
+                "listCached" -> result.success(ShareIntake.listCached(context))
                 "deleteCached" -> {
                     val path = call.argument<String>("path")
                     if (path == null) {

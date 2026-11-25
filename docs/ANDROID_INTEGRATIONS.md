@@ -64,12 +64,19 @@ Implement a small Kotlin bridge in the existing Flutter `MainActivity` or a dedi
 
 - Handle initial activity launch (`onCreate`) and subsequent shares (`onNewIntent`).
 - Read `content://` streams via `ContentResolver` while the temporary URI grant is valid.
-- Copy streams to an app-private cache import directory.
+- Copy streams to an app-private import directory.
 - Avoid loading the full audio into memory.
 - Pass only internal cache path and safe metadata to Dart.
 - Queue pending shared items until Flutter is listening so a cold-start share is not lost.
 - Clean up cache files only after Flutter confirms successful permanent import, or through a safe stale-temp cleanup policy.
 - Handle cancellation, unreadable URIs, missing streams, and multiple shared files.
+
+As built (Milestone 4), `ShareBridge.kt`:
+
+- The inbox is `filesDir/shared_imports`, **not** `cacheDir` — Android may clear the cache under storage pressure, which would lose a share that wasn't imported yet. The Milestone 0 `cacheDir/shared_imports` is deleted on startup.
+- Each copy is streamed to `<id>.part` and renamed to `<id>.<ext>` when complete (extension from the MIME type only); a `<id>.json` sidecar holds id, time, display name, MIME type, shared text. Half-written `.part` files older than a day are removed.
+- `listCached` returns every copy on disk (from earlier sessions too); a copy without a sidecar is still listed. `takePending` returns new shares, including failures (no file). `deleteCached(path)` removes a copy and its sidecar and refuses paths outside the inbox.
+- A copy is deleted only when Dart imports it successfully or the user discards it. There is no automatic expiry: anything waiting is visible in **Shared recordings**.
 
 Do not store the external `content://` URI as the permanent recording path. Do not request `MANAGE_EXTERNAL_STORAGE`, broad storage access, or microphone permission for this feature.
 

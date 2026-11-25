@@ -9,6 +9,7 @@
 ## Providers
 
 - `recentCallsProvider` — `listRecentWithLeads()`.
+- `leadCallsProvider(leadId)` — one lead's calls, for linking a recording to a call.
 - `callLogEditorProvider` (`CallLogEditor`) — `save(CallLogInput, existing:)`: manual call (copies the lead's phone/name onto the call), edit, optional lead temperature change.
 - `pendingCallTrackerProvider` (keepAlive, `PendingCallTracker`) — `dial(lead)` opens the dialer via `PhoneLauncher` and remembers the call; the home shell calls `markLeftApp()` on hide and `takeOnReturn()` on resume to open the Log call sheet (only if the app really went to the background, within 3 hours).
 

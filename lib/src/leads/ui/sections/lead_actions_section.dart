@@ -4,6 +4,7 @@ import 'package:lead_tracker/core/instances/phone_launcher.dart';
 import 'package:lead_tracker/src/calls/providers/pending_call_provider.dart';
 import 'package:lead_tracker/src/calls/ui/components/log_call_sheet.dart';
 import 'package:lead_tracker/src/leads/data/models/lead.dart';
+import 'package:lead_tracker/src/recordings/ui/shared_inbox_page.dart';
 import 'package:lead_tracker/src/shared/components/app_snack_bar.dart';
 
 /// Call, WhatsApp, and Log call buttons.
@@ -56,6 +57,12 @@ class LeadActionsSection extends ConsumerWidget {
             ),
             icon: const Icon(Icons.edit_note),
             label: const Text('Log call'),
+          ),
+          // Fallback when sharing from Google Phone isn't possible.
+          OutlinedButton.icon(
+            onPressed: () => pickAudioAndImport(context, ref, leadId: lead.id),
+            icon: const Icon(Icons.audio_file_outlined),
+            label: const Text('Add recording'),
           ),
         ],
       ),

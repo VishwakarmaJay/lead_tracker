@@ -1,0 +1,34 @@
+{
+    // Run configurations for VS Code (Dart/Flutter extension).
+    // The Flutter SDK is the FVM pin (3.38.3) — see .vscode/settings.json.
+    //
+    // After adding a plugin or changing Kotlin / AndroidManifest / Gradle,
+    // stop and launch again: hot reload doesn't install native code
+    // (docs/BUILD_AND_RELEASE.md §7).
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Lead Tracker (debug)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart"
+        },
+        {
+            "name": "Lead Tracker (profile)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "profile"
+        },
+        {
+            // Needs android/key.properties (release signing) — the build stops
+            // with a clear message without it. Shorebird is inactive here:
+            // only APKs built by `shorebird release` receive patches.
+            "name": "Lead Tracker (release)",
+            "request": "launch",
+            "type": "dart",
+            "program": "lib/main.dart",
+            "flutterMode": "release"
+        }
+    ]
+}

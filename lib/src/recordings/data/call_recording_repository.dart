@@ -50,6 +50,10 @@ class CallRecordingRepository {
   Future<void> updateNotes(int id, String? notes) =>
       _update(id, {'notes': notes});
 
+  /// Stores the duration once the player has read it.
+  Future<void> updateDuration(int id, int durationMs) =>
+      _update(id, {'duration_ms': durationMs});
+
   /// Deletes the metadata row only.
   Future<void> deleteRecordingRow(int id) {
     return Future(() async {

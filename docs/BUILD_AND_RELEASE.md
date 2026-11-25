@@ -83,6 +83,12 @@ shorebird init                  # in the project root; creates shorebird.yaml wi
 If `shorebird patch` reports native diffs, **don't** force it with
 `--allow-native-diffs`; make a new release instead.
 
+**During development the same rule applies to hot reload.** After adding a
+plugin with Android code (or changing Kotlin, the manifest, or Gradle), stop
+the app and run `fvm flutter run` again. Hot reload / hot restart only swap
+Dart code, so the app would call a plugin whose Android side isn't installed:
+`MissingPluginException(No implementation found for method … on channel …)`.
+
 ## 8. Commands
 
 ### New release (APK)

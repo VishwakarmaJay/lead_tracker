@@ -118,6 +118,8 @@ Not in this milestone: editing the default country code in Settings (it is store
 
 **Ships as:** release (Kotlin + `just_audio`).
 
+**Status:** code written — durable share inbox (survives the app being killed), Shared recordings screen, Save recording screen (preview, lead choice with recent-call shortcuts, optional call link, notes), SHA-256 duplicate detection, copy-then-insert with rollback, recordings in the lead timeline, player screen (seek, speed, notes, call link, delete), file-picker fallback. 160 automated tests pass; debug APK builds. Device check: `DEVICE_TEST_CHECKLIST.md` §I.
+
 ## Milestone 5 — Optional Android call-history sync
 
 Only if the Milestone 0 POC passed.

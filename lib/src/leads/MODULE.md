@@ -17,7 +17,9 @@ Sections: `ui/sections/lead_{header,actions,info,timeline}_section.dart`.
 - `leadListFilterProvider` (`LeadQuery`) + `leadListProvider` — the Leads tab.
 - `leadSearchProvider(text)` — the lead picker.
 - `leadDetailProvider(leadId)` (`LeadDetail`) — `setStatus`, `setTemperature` (optimistic), `delete`, `restore`.
-- `leadTimelineProvider(leadId)` (`LeadTimeline`) — the lead's calls; `deleteCall`.
+- `leadTimelineProvider(leadId)` (`LeadTimeline`) — `List<TimelineEntry>`: `TimelineCall` and `TimelineRecording`, newest first; a linked recording sits just above its call (`buildTimeline`). `deleteCall`.
+
+The detail screen's actions include **Add recording** (file-picker fallback → recording import with this lead chosen).
 - `leadEditorProvider` (`LeadEditor`) — `save`, `findDuplicates`, `isPhoneRecognised`.
 - `lead_refresh.dart` — `ref.refreshLeadViews(leadId:)` after any write.
 - Validation: `validateLeadName/Phone/Email`, `leadDraftFromInput` in `providers/lead_form_provider.dart`.

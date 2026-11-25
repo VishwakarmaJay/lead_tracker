@@ -261,6 +261,19 @@ As built (Milestone 3):
 
 Audio stays a file, never a BLOB.
 
+As built (Milestone 4) — details in `lib/src/recordings/MODULE.md`:
+
+- Shared copies wait in a durable inbox (`filesDir`), listed again after a
+  restart; nothing is lost if the user doesn't import straight away.
+- Step 8 **copies** rather than moves: the permanent copy is written
+  (`.part` + rename), the row inserted, and only then is the inbox copy
+  deleted. If the insert fails the permanent copy is removed and the inbox
+  copy is still there — "Retry" is simply saving again.
+- Lead suggestions: none are inferred from the file. Leads called in the last
+  24 hours are shown as shortcuts; the user always picks.
+- A file the phone can't play is still saved and flagged, never discarded.
+- File-picker fallback goes through the same service.
+
 ## 9. Update feature (`src/update`, mirrors hedged)
 
 - `shorebirdProvider` (`keepAlive`) exposes `ShorebirdCodePush()`.

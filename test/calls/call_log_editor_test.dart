@@ -42,7 +42,7 @@ void main() {
         );
 
     final timeline = await container.read(leadTimelineProvider(leadId).future);
-    final call = timeline.single;
+    final call = (timeline.single as TimelineCall).call;
     expect(call.source, CallSource.manual);
     expect(call.callType, CallType.outgoing);
     expect(call.summary, 'Budget 50k, wants a demo');

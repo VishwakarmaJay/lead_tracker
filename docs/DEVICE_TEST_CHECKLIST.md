@@ -72,6 +72,23 @@ Copy `docs/samples/leads_sample.csv` to the phone (Downloads). For XLSX, open th
 - [ ] Pick a `.xls` or a photo (if the picker allows): a clear "Choose an Excel (.xlsx) or CSV (.csv) file" message.
 - [ ] Airplane mode on: import still works.
 
+## I. Recording import (Milestone 4)
+
+Full rebuild first (`fvm flutter run`, not hot reload — new plugins). Have one lead you've called, and record a short test call with Google Phone (it announces the recording to both sides).
+
+- [ ] Google Phone → recorded call → Share → **Lead Tracker**, with the app closed: it opens on **Shared recordings** with the recording (name, size, type). Note the type: ______
+- [ ] Same with the app open on another tab: **Shared recordings** opens by itself.
+- [ ] Share one, then swipe Lead Tracker away from Recents before saving it. Reopen: it is still in **Shared recordings** (Settings → Shared files).
+- [ ] **Save to a lead**: the preview plays (play/pause, seek). "Called recently" shows the lead you just called; tap it, or **Choose lead**.
+- [ ] Pick one of the lead's calls under "Link to a logged call", add a note, **Save to <lead>**. Snack bar "Recording saved to …" with **Open lead**; the item is gone from Shared recordings.
+- [ ] The lead's Activity shows the recording (next to its call; the call shows a waveform icon). Tap it: the player plays; 1× → 1.5× → 2× works; the duration shows.
+- [ ] Delete the recording in Google Phone. It still plays in Lead Tracker.
+- [ ] Share the **same** recording again → Save: "Already saved" → **Open it** opens the player; **Discard this copy** removes the share.
+- [ ] Player: edit notes; change the linked call; **Delete** asks first and removes it from the timeline (Google Phone's copy untouched).
+- [ ] Lead detail → **Add recording**: pick an audio file (e.g. a WhatsApp voice note) → it saves to that lead.
+- [ ] Start saving a long recording and open the update banner (if a patch is pending): **Restart now** is disabled until the save finishes.
+- [ ] Airplane mode on: share, save, play all work.
+
 ## C. Call-log POC
 
 Follow `docs/poc/CALL_LOG_POC.md` and fill in its results table.

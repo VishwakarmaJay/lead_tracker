@@ -35,5 +35,7 @@ class AppRouter extends RootStackRouter {
     AutoRoute(page: LeadFormRoute.page, path: '/lead-form'),
     AutoRoute(page: ImportRoute.page, path: '/import'),
     AutoRoute(page: SharedInboxRoute.page, path: '/shared-inbox'),
+    AutoRoute(page: RecordingImportRoute.page, path: '/recording-import'),
+    AutoRoute(page: RecordingPlayerRoute.page, path: '/recordings/:id'),
   ];
 }

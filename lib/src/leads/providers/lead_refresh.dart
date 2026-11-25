@@ -1,3 +1,4 @@
+import 'package:lead_tracker/src/calls/providers/lead_calls_provider.dart';
 import 'package:lead_tracker/src/calls/providers/recent_calls_provider.dart';
 import 'package:lead_tracker/src/leads/providers/lead_detail_provider.dart';
 import 'package:lead_tracker/src/leads/providers/lead_list_provider.dart';
@@ -25,6 +26,7 @@ extension LeadRefresh on Ref {
       if (!skipTimeline) {
         invalidate(leadTimelineProvider(leadId));
       }
+      invalidate(leadCallsProvider(leadId));
     }
   }
 }
